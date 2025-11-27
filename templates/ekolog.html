@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Ekologiya Qo'mitasi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #fefeff 0%, #f0eef1 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        }
+        .status-good { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .status-moderate { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); }
+        .status-bad { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .nav-item {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            margin: 4px 0;
+        }
+        .nav-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            transform: translateX(5px);
+        }
+        .nav-item.active {
+            background: #3b82f6;
+            color: white;
+        }
+        .search-input {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .search-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .mobile-table { display: none; }
+        @media (max-width: 768px) {
+            .desktop-table { display: none; }
+            .mobile-table { display: block; }
+            .stats-card { padding: 16px; }
+        }
+        .qr-code {
+            border: 2px dashed #3b82f6;
+            padding: 20px;
+            border-radius: 12px;
+            background: white;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .company-status-good { background-color: #dcfce7; border-color: #16a34a; }
+        .company-status-moderate { background-color: #fef9c3; border-color: #ca8a04; }
+        .company-status-bad { background-color: #fee2e2; border-color: #dc2626; }
+        
+        /* Jarima modal uchun yangi stillar */
+        .document-border {
+            border: 2px solid #1e40af;
+            border-radius: 12px;
+        }
+        .official-stamp {
+            position: absolute;
+            right: 30px;
+            top: 30px;
+            opacity: 0.1;
+            transform: rotate(15deg);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="glass-card p-6 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-leaf text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">Ekologiya Qo'mitasi Admin Paneli</h1>
+                        <p class="text-gray-600">Toshkent shahri sanoat korxonalari monitoringi</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-green-600">
+                        <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm font-medium">Online</span>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <i class="fas fa-user mr-1"></i>
+                        {{ request.user.username }}
+                    </div>
+                    <a href="{% url 'logout' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Chiqish</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar -->
+            <div class="lg:col-span-1">
+                <div class="glass-card p-6 sticky top-6">
+                    <nav class="space-y-2">
+                        <a href="#" class="nav-item active flex items-center space-x-3 p-3" data-tab="dashboard">
+                            <i class="fas fa-tachometer-alt w-5 text-center"></i>
+                            <span>Boshqaruv paneli</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center space-x-3 p-3" data-tab="companies">
+                            <i class="fas fa-industry w-5 text-center"></i>
+                            <span>Korxonalar</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center space-x-3 p-3" data-tab="penalties">
+                            <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
+                            <span>Jarimalar</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center space-x-3 p-3" data-tab="reports">
+                            <i class="fas fa-chart-bar w-5 text-center"></i>
+                            <span>Hisobotlar</span>
+                        </a>
+                    </nav>
+
+                    <!-- Statistikalar -->
+                    <div class="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h3 class="font-semibold text-blue-800 mb-3">Statistika</h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-blue-700">Jami korxonalar:</span>
+                                <span class="font-bold text-blue-800" id="total-companies">{{ total_companies|default:0 }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-red-600">Xavfli holat:</span>
+                                <span class="font-bold text-red-600" id="dangerous-count">{{ dangerous_companies|default:0 }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-yellow-600">Faol jarimalar:</span>
+                                <span class="font-bold text-yellow-600" id="active-penalties">{{ active_penalties|default:0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="lg:col-span-3">
+                <!-- Dashboard Tab -->
+                <div class="tab-content" id="dashboard-tab">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="stats-card">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="text-white/90 text-sm font-medium">Jami korxonalar</div>
+                                <i class="fas fa-industry text-white/70 text-xl"></i>
+                            </div>
+                            <div class="text-3xl font-bold text-white mb-1" id="stats-total">{{ total_companies|default:0 }}</div>
+                            <div class="text-white/80 text-xs">Monitoring ostida</div>
+                        </div>
+                        
+                        <div class="stats-card status-bad">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="text-white/90 text-sm font-medium">Xavfli holat</div>
+                                <i class="fas fa-exclamation-triangle text-white/70 text-xl"></i>
+                            </div>
+                            <div class="text-3xl font-bold text-white mb-1" id="stats-dangerous">{{ dangerous_companies|default:0 }}</div>
+                            <div class="text-white/80 text-xs">Jarima kerak</div>
+                        </div>
+                        
+                        <div class="stats-card status-moderate">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="text-white/90 text-sm font-medium">Faol jarimalar</div>
+                                <i class="fas fa-file-invoice-dollar text-white/70 text-xl"></i>
+                            </div>
+                            <div class="text-3xl font-bold text-white mb-1" id="stats-penalties">{{ active_penalties|default:0 }}</div>
+                            <div class="text-white/80 text-xs">Kutilayotgan</div>
+                        </div>
+                    </div>
+
+                    <!-- Xavfli Korxonalar -->
+                    <div class="glass-card p-6 mb-8">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-3 sm:space-y-0">
+                            <h2 class="text-xl font-bold text-gray-800">Xavfli Holatdagi Korxonalar</h2>
+                        </div>
+                        <div class="space-y-4" id="dangerous-companies">
+                            {% if dangerous_companies_list %}
+                                {% for company in dangerous_companies_list %}
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-red-50 rounded-lg border border-red-200">
+                                    <div class="mb-3 sm:mb-0">
+                                        <h3 class="font-semibold text-red-800">{{ company.name }}</h3>
+                                        <p class="text-red-700 text-sm mt-1">
+                                            Oshib ketgan miqdor: <span class="font-bold">{{ company.current_gas_amount|floatformat:1 }} kg/soat</span> • 
+                                            {{ company.get_trees_needed }} ta daraxt ekish kerak
+                                        </p>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button class="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-blue-600 transition text-sm flex items-center space-x-2" onclick="showPenaltyModal({{ company.id }})">
+                                            <i class="fas fa-file-invoice-dollar"></i>
+                                            <span>Jarima</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-check-circle text-green-500 text-4xl mb-3"></i>
+                                    <p>Hozircha xavfli holatdagi korxonalar yo'q</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- So'nggi Faollik -->
+                    <div class="glass-card p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-6">So'nggi Faollik</h2>
+                        <div class="space-y-4" id="recent-activity">
+                            {% if recent_penalties %}
+                                {% for penalty in recent_penalties %}
+                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-industry text-white text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-800">{{ penalty.company.name }}</p>
+                                            <p class="text-gray-600 text-sm">{{ penalty.trees_required }} ta daraxt • {{ penalty.created_at|date:"Y-m-d" }}</p>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 {% if penalty.status == 'active' %}bg-yellow-100 text-yellow-800{% else %}bg-green-100 text-green-800{% endif %} rounded-full text-xs font-medium">
+                                        {{ penalty.get_status_display }}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-info-circle text-blue-500 text-4xl mb-3"></i>
+                                    <p>Hozircha faollik yo'q</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Companies Tab -->
+                <div class="tab-content hidden" id="companies-tab">
+                    <div class="glass-card p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 space-y-4 lg:space-y-0">
+                            <h2 class="text-xl font-bold text-gray-800">Korxonalar Boshqaruvi</h2>
+                            <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+                                <div class="relative">
+                                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                    <input type="text" id="search-companies" placeholder="Korxona nomi bo'yicha qidirish..." class="search-input pl-10 pr-4 py-2 w-full sm:w-64 border border-gray-300 rounded-lg focus:outline-none">
+                                </div>
+                                <select id="filter-status" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none">
+                                    <option value="">Barcha holatlar</option>
+                                    <option value="good">Yaxshi</option>
+                                    <option value="moderate">O'rtacha</option>
+                                    <option value="bad">Xavfli</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Loading Spinner -->
+                        <div id="companies-loading" class="hidden text-center py-8">
+                            <div class="loading mx-auto mb-2"></div>
+                            <p class="text-gray-600">Yuklanmoqda...</p>
+                        </div>
+
+                        <!-- Companies Table Container -->
+                        <div id="companies-container">
+                            {% if companies %}
+                                <div class="overflow-x-auto">
+                                    <table class="w-full border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Korxona nomi</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">STIR</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Hudud</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Sanoat turi</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Joriy gaz</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Holati</th>
+                                                
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for company in companies %}
+                                            <tr class="border-t hover:bg-gray-50">
+                                                <td class="p-3 text-sm">{{ company.name }}</td>
+                                                <td class="p-3 text-sm">{{ company.stir_number }}</td>
+                                                <td class="p-3 text-sm">{{ company.region.name }}</td>
+                                                <td class="p-3 text-sm">{{ company.industry_type.name }}</td>
+                                                <td class="p-3 text-sm">{{ company.current_gas_amount }} kg</td>
+                                                <td class="p-3 text-sm">
+                                                    <span class="px-2 py-1 rounded-full text-xs font-medium 
+                                                        {% if company.status == 'good' %}bg-green-100 text-green-800
+                                                        {% elif company.status == 'moderate' %}bg-yellow-100 text-yellow-800
+                                                        {% else %}bg-red-100 text-red-800{% endif %}">
+                                                        {{ company.get_status_display }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <!-- Pagination -->
+                                {% if companies.has_other_pages %}
+                                <div class="mt-6 flex justify-center">
+                                    <nav class="flex space-x-2">
+                                        {% if companies.has_previous %}
+                                            <a href="?page={{ companies.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+                                                &laquo;
+                                            </a>
+                                        {% endif %}
+                                        
+                                        {% for num in companies.paginator.page_range %}
+                                            {% if companies.number == num %}
+                                                <span class="px-3 py-2 bg-blue-500 text-white rounded">{{ num }}</span>
+                                            {% else %}
+                                                <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+                                                    {{ num }}
+                                                </a>
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% if companies.has_next %}
+                                            <a href="?page={{ companies.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+                                                &raquo;
+                                            </a>
+                                        {% endif %}
+                                    </nav>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-industry text-4xl mb-3 text-gray-300"></i>
+                                    <p>Hech qanday korxona topilmadi</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Penalties Tab -->
+                <div class="tab-content hidden" id="penalties-tab">
+                    <div class="glass-card p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 space-y-4 lg:space-y-0">
+                            <h2 class="text-xl font-bold text-gray-800">Jarima Arizalari</h2>
+                            <div class="flex space-x-3">
+                                <select id="filter-penalties" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none">
+                                    <option value="">Barcha holatlar</option>
+                                    <option value="active">Faol</option>
+                                    <option value="completed">Bajarilgan</option>
+                                    <option value="cancelled">Bekor qilingan</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Loading Spinner -->
+                        <div id="penalties-loading" class="hidden text-center py-8">
+                            <div class="loading mx-auto mb-2"></div>
+                            <p class="text-gray-600">Yuklanmoqda...</p>
+                        </div>
+
+                        <!-- Penalties Table Container -->
+                        <div id="penalties-container">
+                            {% if penalties %}
+                                <div class="overflow-x-auto">
+                                    <table class="w-full border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Jarima raqami</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Korxona</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Oshib ketgan miqdor</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Kerakli daraxtlar</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Holati</th>
+                                                <th class="p-3 text-left text-sm font-medium text-gray-700">Muddati</th>
+
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for penalty in penalties %}
+                                            <tr class="border-t hover:bg-gray-50">
+                                                <td class="p-3 text-sm">{{ penalty.penalty_number }}</td>
+                                                <td class="p-3 text-sm">{{ penalty.company.name }}</td>
+                                                <td class="p-3 text-sm">{{ penalty.excess_amount }} kg</td>
+                                                <td class="p-3 text-sm">{{ penalty.trees_required }} ta</td>
+                                                <td class="p-3 text-sm">
+                                                    <span class="px-2 py-1 rounded-full text-xs font-medium 
+                                                        {% if penalty.status == 'active' %}bg-yellow-100 text-yellow-800
+                                                        {% elif penalty.status == 'completed' %}bg-green-100 text-green-800
+                                                        {% else %}bg-red-100 text-red-800{% endif %}">
+                                                        {{ penalty.get_status_display }}
+                                                    </span>
+                                                </td>
+                                                <td class="p-3 text-sm">{{ penalty.deadline|date:"d.m.Y" }}</td>
+                                        
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <!-- Pagination -->
+                                {% if penalties.has_other_pages %}
+                                <div class="mt-6 flex justify-center">
+                                    <nav class="flex space-x-2">
+                                        {% if penalties.has_previous %}
+                                            <a href="?page={{ penalties.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+                                                &laquo;
+                                            </a>
+                                        {% endif %}
+                                        
+                                        {% for num in penalties.paginator.page_range %}
+                                            {% if penalties.number == num %}
+                                                <span class="px-3 py-2 bg-blue-500 text-white rounded">{{ num }}</span>
+                                            {% else %}
+                                                <a href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+                                                    {{ num }}
+                                                </a>
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% if penalties.has_next %}
+                                            <a href="?page={{ penalties.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+                                                &raquo;
+                                            </a>
+                                        {% endif %}
+                                    </nav>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-file-invoice-dollar text-4xl mb-3 text-gray-300"></i>
+                                    <p>Hech qanday jarima topilmadi</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Tab -->
+                <div class="tab-content hidden" id="reports-tab">
+                    <!-- Reports controls -->
+                    <div class="glass-card p-6 mb-8">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 space-y-4 lg:space-y-0">
+                            <h2 class="text-xl font-bold">Hisobotlar va Chartlar</h2>
+                            <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-2">
+                                <select id="report-type" class="px-3 py-2 border rounded">
+                                    <option value="monthly">Oylik</option>
+                                    <option value="quarterly">Choraklik</option>
+                                    <option value="yearly">Yillik</option>
+                                </select>
+
+                                <select id="report-year" class="px-3 py-2 border rounded">
+                                    <!-- dynamic options via JS -->
+                                </select>
+
+                                <select id="report-month" class="px-3 py-2 border rounded" style="display:inline-block;">
+                                    <option value="1">Yanvar</option><option value="2">Fevral</option>
+                                    <option value="3">Mart</option><option value="4">Aprel</option>
+                                    <option value="5">May</option><option value="6">Iyun</option>
+                                    <option value="7">Iyul</option><option value="8">Avgust</option>
+                                    <option value="9">Sentyabr</option><option value="10">Oktyabr</option>
+                                    <option value="11">Noyabr</option><option value="12">Dekabr</option>
+                                </select>
+
+                                <button id="download-report-btn" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition flex items-center space-x-2">
+                                    <i class="fas fa-download"></i>
+                                    <span>Hisobotni yuklab olish (XLSX)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Stats Cards for Reports -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="text-sm text-gray-600">Jami korxonalar</p>
+                                        <p class="text-2xl font-bold text-blue-600" id="report-total">0</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-industry text-blue-500"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="text-sm text-gray-600">Xavfli korxonalar</p>
+                                        <p class="text-2xl font-bold text-red-600" id="report-dangerous">0</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-exclamation-triangle text-red-500"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="text-sm text-gray-600">Faol jarimalar</p>
+                                        <p class="text-2xl font-bold text-yellow-600" id="report-penalties">0</p>
+                                    </div>
+                                    <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-file-invoice-dollar text-yellow-500"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div class="p-4 bg-white rounded-lg border border-gray-200">
+                                <h3 class="text-sm font-medium mb-2">Korxona Holatlari Bo'yicha Taqsimot</h3>
+                                <canvas id="statusPieChart" width="400" height="300"></canvas>
+                            </div>
+
+                            <div class="p-4 bg-white rounded-lg border border-gray-200">
+                                <h3 class="text-sm font-medium mb-2">Korxona Holatlari Tendenstsiyasi</h3>
+                                <canvas id="statusTrendChart" width="400" height="300"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-white rounded-lg border border-gray-200">
+                            <h3 class="text-sm font-medium mb-2">Sanoat Turlari Bo'yicha Taqsimot</h3>
+                            <canvas id="industryBarChart" width="800" height="400"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- Jarima Modal -->
+    <div id="penalty-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto document-border relative">
+            <!-- Rasmiy muhr -->
+            <div class="official-stamp">
+                <div class="text-6xl font-bold text-blue-600 opacity-20">E K O L O G</div>
+                <div class="text-lg text-blue-600 opacity-20 text-center">RASMIY HUJJAT</div>
+            </div>
+            
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-800 p-6 rounded-t-2xl text-white">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold">Jarima Arizasi</h2>
+                        <p class="text-blue-100">Ekologiya qo'mitasi rasmiy hujjati</p>
+                    </div>
+                    <button onclick="closePenaltyModal()" class="text-white hover:text-blue-200 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6">
+                <!-- Document Header -->
+                <div class="flex justify-between items-start mb-8 border-b-2 border-blue-200 pb-4">
+                    <div>
+                        <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-xl flex items-center justify-center mb-2">
+                            <i class="fas fa-leaf text-white text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-700">O'ZBEKISTON RESPUBLIKASI</h3>
+                        <h3 class="text-lg font-semibold text-gray-700">EKOLOGIYA QO'MITASI</h3>
+                        <p class="text-sm text-gray-600 mt-1">Toshkent shahar boshqarmasi</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-600">Hujjat raqami:</div>
+                        <div class="text-lg font-bold text-blue-600" id="document-number">DOC-20241215-0001</div>
+                        <div class="text-sm text-gray-600 mt-2">Sanasi:</div>
+                        <div class="font-semibold" id="document-date">15.12.2024</div>
+                    </div>
+                </div>
+
+                <!-- Company Information -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-200 pb-2">Korxona Ma'lumotlari</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <label class="text-sm text-gray-600">Korxona nomi:</label>
+                            <div class="font-semibold text-lg text-blue-800" id="company-name">-</div>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <label class="text-sm text-gray-600">STIR raqami:</label>
+                            <div class="font-semibold text-lg text-blue-800" id="company-stir">-</div>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <label class="text-sm text-gray-600">Hudud:</label>
+                            <div class="font-semibold text-blue-800" id="company-region">-</div>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <label class="text-sm text-gray-600">Sanoat turi:</label>
+                            <div class="font-semibold text-blue-800" id="company-industry">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Violation Details -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-200 pb-2">Buzilgan Talablar</h4>
+                    <div class="bg-red-50 border-2 border-red-200 rounded-lg p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                            <div>
+                                <div class="text-sm text-gray-600">Ruxsat etilgan maksimal gaz</div>
+                                <div class="text-2xl font-bold text-red-600" id="max-gas">0 kg</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Haqiqiy gaz miqdori</div>
+                                <div class="text-2xl font-bold text-red-600" id="current-gas">0 kg</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Oshib ketgan miqdor</div>
+                                <div class="text-2xl font-bold text-red-600" id="excess-gas">0 kg</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Penalty Details -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-200 pb-2">Jarima Tafsilotlari</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 mb-4">
+                                <div class="text-center">
+                                    <i class="fas fa-tree text-yellow-500 text-4xl mb-3"></i>
+                                    <div class="text-sm text-gray-600">Majburiy daraxt ekish</div>
+                                    <div class="text-3xl font-bold text-yellow-600" id="trees-required">0 ta</div>
+                                    <div class="text-sm text-gray-600 mt-1">(1 daraxt = 10 kg gaz)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="bg-green-50 border-2 border-green-200 rounded-lg p-6">
+                                <div class="text-center">
+                                    <i class="fas fa-money-bill-wave text-green-500 text-4xl mb-3"></i>
+                                    <div class="text-sm text-gray-600">Jarima miqdori</div>
+                                    <div class="text-3xl font-bold text-green-600" id="penalty-amount">0 so'm</div>
+                                    <div class="text-sm text-gray-600 mt-1">(1 daraxt = 50,000 so'm)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deadline and Comment -->
+                <div class="mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Muddat *</label>
+                            <input type="date" id="penalty-deadline" class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Qo'shimcha izoh</label>
+                            <textarea id="penalty-comment" rows="3" class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Qo'shimcha izoh yozing..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QR Code Section -->
+                <div class="mb-8">
+                    <h4 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-200 pb-2">QR Kod</h4>
+                    <div class="text-center">
+                        <div id="qr-code-container" class="inline-block p-6 bg-white border-2 border-dashed border-gray-300 rounded-lg">
+                            <i class="fas fa-qrcode text-4xl text-gray-400 mb-3"></i>
+                            <p class="text-gray-500">Jarima yuborilganda QR kod yaratiladi</p>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-3">Ushbu QR kod orqali jarima ma'lumotlarini tekshirishingiz mumkin</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t-2 border-blue-200">
+                    <button onclick="closePenaltyModal()" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition flex items-center justify-center space-x-2">
+                        <i class="fas fa-times"></i>
+                        <span>Bekor qilish</span>
+                    </button>
+                    <button onclick="submitPenalty()" id="submit-penalty-btn" class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition flex items-center justify-center space-x-2">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Jarimani yuborish</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-green-500 text-2xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Muvaffaqiyatli!</h3>
+            <p class="text-gray-600 mb-4">Jarima arizasi muvaffaqiyatli yuborildi</p>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <div class="text-sm text-gray-600">Jarima raqami:</div>
+                <div class="font-semibold text-green-700 text-lg" id="success-penalty-number">-</div>
+                <div class="text-sm text-gray-600 mt-2">Hujjat raqami:</div>
+                <div class="font-semibold text-green-700" id="success-document-number">-</div>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">Jarima korxonaga muvaffaqiyatli yuborildi va ma'lumotlar bazasiga saqlandi</p>
+            <button onclick="closeSuccessModal()" class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                Yopish
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // CSRF token sozlamalari
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        // Asosiy funksiyalar
+        let currentPenaltyCompany = null;
+
+        // Navigation
+        const navItems = document.querySelectorAll('.nav-item');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                
+                tabContents.forEach(tab => tab.classList.add('hidden'));
+                
+                const tabId = item.getAttribute('data-tab') + '-tab';
+                document.getElementById(tabId).classList.remove('hidden');
+                
+                // Agar hisobotlar tabi ochilsa, chartlarni yangilash
+                if (item.getAttribute('data-tab') === 'reports') {
+                    fetchAndRender();
+                }
+            });
+        });
+
+        // Kompaniyalarni yuklash
+        async function loadCompanies() {
+            const search = document.getElementById('search-companies').value;
+            const status = document.getElementById('filter-status').value;
+            
+            document.getElementById('companies-loading').classList.remove('hidden');
+            
+            try {
+                const params = new URLSearchParams({
+                    search: search,
+                    status: status,
+                    'X-Requested-With': 'XMLHttpRequest'
+                });
+                
+                const response = await fetch(`/companies/?${params}`);
+                const html = await response.text();
+                
+                document.getElementById('companies-container').innerHTML = html;
+            } catch (error) {
+                console.error('Xatolik:', error);
+                showNotification('Ma\'lumotlarni yuklashda xatolik', 'error');
+            } finally {
+                document.getElementById('companies-loading').classList.add('hidden');
+            }
+        }
+
+        // Jarimalarni yuklash
+        async function loadPenalties() {
+            const status = document.getElementById('filter-penalties').value;
+            
+            document.getElementById('penalties-loading').classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/penalties/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrftoken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: `status=${status}`
+                });
+                
+                const html = await response.text();
+                document.getElementById('penalties-container').innerHTML = html;
+            } catch (error) {
+                console.error('Xatolik:', error);
+                showNotification('Ma\'lumotlarni yuklashda xatolik', 'error');
+            } finally {
+                document.getElementById('penalties-loading').classList.add('hidden');
+            }
+        }
+
+        // Statistikani yangilash
+        async function updateStatistics() {
+            try {
+                const response = await fetch('/dashboard-stats/');
+                const stats = await response.json();
+                
+                document.getElementById('total-companies').textContent = stats.total_companies;
+                document.getElementById('dangerous-count').textContent = stats.dangerous_companies;
+                document.getElementById('active-penalties').textContent = stats.active_penalties;
+                
+                document.getElementById('stats-total').textContent = stats.total_companies;
+                document.getElementById('stats-dangerous').textContent = stats.dangerous_companies;
+                document.getElementById('stats-penalties').textContent = stats.active_penalties;
+            } catch (error) {
+                console.error('Statistikani yangilashda xatolik:', error);
+            }
+        }
+
+        // Event listener'lar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Qidiruv va filtrlash
+            document.getElementById('search-companies').addEventListener('input', debounce(loadCompanies, 300));
+            document.getElementById('filter-status').addEventListener('change', loadCompanies);
+            document.getElementById('filter-penalties').addEventListener('change', loadPenalties);
+            
+            // Real-time yangilanish
+            setInterval(updateStatistics, 30000); // 30 soniyada bir
+            
+            // Dastlabki yuklash
+            updateStatistics();
+        });
+
+        // Debounce funksiyasi
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Jarima modalini ochish
+        async function showPenaltyModal(companyId) {
+            try {
+                // Yuklanishni ko'rsatish
+                const submitBtn = document.getElementById('submit-penalty-btn');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<div class="loading mx-auto"></div> Yuklanmoqda...';
+
+                // Kompaniya ma'lumotlarini olish (mock data)
+                const companyData = {
+                    id: companyId,
+                    name: "Toshkent Metallurgiya Zavodi",
+                    stir_number: "123456789",
+                    region: "Toshkent shahri",
+                    industry_type: "Metallurgiya",
+                    max_allowed_gas: 50.0,
+                    current_gas_amount: 85.5,
+                    address: "Toshkent shahri, Yunusobod tumani"
+                };
+
+                currentPenaltyCompany = companyData;
+                
+                // Modalni to'ldirish
+                document.getElementById('company-name').textContent = companyData.name;
+                document.getElementById('company-stir').textContent = companyData.stir_number;
+                document.getElementById('company-region').textContent = companyData.region;
+                document.getElementById('company-industry').textContent = companyData.industry_type;
+                
+                document.getElementById('max-gas').textContent = companyData.max_allowed_gas + ' kg';
+                document.getElementById('current-gas').textContent = companyData.current_gas_amount + ' kg';
+                
+                const excessAmount = companyData.current_gas_amount - companyData.max_allowed_gas;
+                document.getElementById('excess-gas').textContent = excessAmount > 0 ? excess_amount.toFixed(1) + ' kg' : '0 kg';
+                
+                // Daraxtlar va jarima miqdorini hisoblash
+                const treesRequired = excessAmount > 0 ? Math.ceil(excessAmount / 10) : 0;
+                const penaltyAmount = treesRequired * 50000;
+                
+                document.getElementById('trees-required').textContent = treesRequired + ' ta';
+                document.getElementById('penalty-amount').textContent = penaltyAmount.toLocaleString('uz-UZ') + ' so\'m';
+                
+                // Hujjat sanasi
+                const today = new Date();
+                document.getElementById('document-date').textContent = today.toLocaleDateString('uz-UZ');
+                
+                // Hujjat raqami
+                const docNumber = `DOC-${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+                document.getElementById('document-number').textContent = docNumber;
+                
+                // Muddatni minimum bugungi kundan keyingi kun qilish
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const minDate = tomorrow.toISOString().split('T')[0];
+                document.getElementById('penalty-deadline').min = minDate;
+                document.getElementById('penalty-deadline').value = minDate;
+                
+                // QR kodni tozalash
+                document.getElementById('qr-code-container').innerHTML = `
+                    <i class="fas fa-qrcode text-4xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-500">Jarima yuborilganda QR kod yaratiladi</p>
+                `;
+                
+                // Modalni ochish
+                document.getElementById('penalty-modal').classList.remove('hidden');
+                
+                // Tugmani qayta faollashtirish
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i><span>Jarimani yuborish</span>';
+                
+            } catch (error) {
+                console.error('Xatolik:', error);
+                showNotification('Kompaniya ma\'lumotlarini yuklashda xatolik', 'error');
+            }
+        }
+
+        // Jarima modalini yopish
+        function closePenaltyModal() {
+            document.getElementById('penalty-modal').classList.add('hidden');
+            currentPenaltyCompany = null;
+            document.getElementById('penalty-comment').value = '';
+        }
+
+        // Jarimani yuborish
+        async function submitPenalty() {
+            if (!currentPenaltyCompany) {
+                showNotification('Kompaniya ma\'lumotlari topilmadi', 'error');
+                return;
+            }
+            
+            const deadline = document.getElementById('penalty-deadline').value;
+            const comment = document.getElementById('penalty-comment').value;
+            
+            if (!deadline) {
+                showNotification('Iltimos, muddatni belgilang!', 'warning');
+                return;
+            }
+            
+            try {
+                // Yuklanish indikatori
+                const submitBtn = document.getElementById('submit-penalty-btn');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<div class="loading mx-auto"></div> Yuborilmoqda...';
+                submitBtn.disabled = true;
+                
+                // Mock API chaqiruqi - haqiqiy loyihada backend endpointiga so'rov yuboriladi
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Muvaffaqiyatli natija
+                const penaltyNumber = `PEN-${new Date().getFullYear()}${(new Date().getMonth()+1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+                const documentNumber = document.getElementById('document-number').textContent;
+                
+                // QR kod yaratish
+                const qrData = {
+                    penalty_number: penaltyNumber,
+                    company: currentPenaltyCompany.name,
+                    stir: currentPenaltyCompany.stir_number,
+                    excess_amount: (currentPenaltyCompany.current_gas_amount - currentPenaltyCompany.max_allowed_gas).toFixed(1),
+                    trees_required: document.getElementById('trees-required').textContent,
+                    penalty_amount: document.getElementById('penalty-amount').textContent,
+                    deadline: deadline,
+                    created_date: new Date().toLocaleDateString('uz-UZ')
+                };
+                
+                // QR kodni ko'rsatish (mock)
+                document.getElementById('qr-code-container').innerHTML = `
+                    <div class="bg-white p-4 rounded-lg">
+                        <div class="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mx-auto mb-2">
+                            <i class="fas fa-qrcode text-2xl text-gray-500"></i>
+                        </div>
+                        <p class="text-xs text-gray-600">QR kod simulyatsiya qilindi</p>
+                    </div>
+                `;
+                
+                // Muvaffaqiyat modalini ko'rsatish
+                document.getElementById('success-penalty-number').textContent = penaltyNumber;
+                document.getElementById('success-document-number').textContent = documentNumber;
+                
+                // Modalni yopish va muvaffaqiyat modalini ochish
+                setTimeout(() => {
+                    closePenaltyModal();
+                    document.getElementById('success-modal').classList.remove('hidden');
+                }, 1000);
+                
+                showNotification('Jarima muvaffaqiyatli yuborildi!', 'success');
+                
+                // Statistikani yangilash
+                updateStatistics();
+                
+            } catch (error) {
+                console.error('Xatolik:', error);
+                showNotification('Jarima yuborishda xatolik', 'error');
+            } finally {
+                // Tugmani qayta faollashtirish
+                const submitBtn = document.getElementById('submit-penalty-btn');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Muvaffaqiyat modalini yopish
+        function closeSuccessModal() {
+            document.getElementById('success-modal').classList.add('hidden');
+            // Jarimalar ro'yxatini yangilash
+            loadPenalties();
+        }
+
+        // Hisobotlar bo'limi uchun JavaScript
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fill years select
+            const yearSelect = document.getElementById('report-year');
+            const thisYear = new Date().getFullYear();
+            for (let y = thisYear; y >= thisYear - 5; y--) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.text = y;
+                yearSelect.appendChild(opt);
+            }
+            yearSelect.value = thisYear;
+
+            const reportTypeEl = document.getElementById('report-type');
+            const reportMonthEl = document.getElementById('report-month');
+            
+            // Hide month select for quarterly/yearly
+            function updateMonthVisibility() {
+                if (reportTypeEl.value === 'monthly') reportMonthEl.style.display = 'inline-block';
+                else reportMonthEl.style.display = 'none';
+            }
+            
+            reportTypeEl.addEventListener('change', () => {
+                updateMonthVisibility();
+                fetchAndRender();
+            });
+            
+            yearSelect.addEventListener('change', fetchAndRender);
+            reportMonthEl.addEventListener('change', fetchAndRender);
+
+            updateMonthVisibility();
+
+            // Chart instances
+            let statusPieChart = null;
+            let statusTrendChart = null;
+            let industryBarChart = null;
+
+            async function fetchAndRender() {
+                const periodType = reportTypeEl.value;
+                const year = yearSelect.value;
+                const month = reportMonthEl.value;
+                
+                // Mock data for charts
+                const mockData = {
+                    stats: {
+                        total_companies: 265,
+                        dangerous_companies: 42,
+                        active_penalties: 28
+                    },
+                    by_status: [
+                        { status: "Yaxshi", count: 145, color: "#10b981" },
+                        { status: "O'rtacha", count: 78, color: "#f59e0b" },
+                        { status: "Xavfli", count: 42, color: "#ef4444" }
+                    ],
+                    monthly_trend: [
+                        { label: "2024-01", good_count: 120, moderate_count: 65, bad_count: 35 },
+                        { label: "2024-02", good_count: 125, moderate_count: 68, bad_count: 38 },
+                        { label: "2024-03", good_count: 130, moderate_count: 70, bad_count: 40 },
+                        { label: "2024-04", good_count: 132, moderate_count: 72, bad_count: 39 },
+                        { label: "2024-05", good_count: 135, moderate_count: 73, bad_count: 41 },
+                        { label: "2024-06", good_count: 138, moderate_count: 75, bad_count: 42 },
+                        { label: "2024-07", good_count: 140, moderate_count: 76, bad_count: 43 },
+                        { label: "2024-08", good_count: 142, moderate_count: 77, bad_count: 42 },
+                        { label: "2024-09", good_count: 143, moderate_count: 77, bad_count: 41 },
+                        { label: "2024-10", good_count: 144, moderate_count: 78, bad_count: 42 },
+                        { label: "2024-11", good_count: 145, moderate_count: 78, bad_count: 42 },
+                        { label: "2024-12", good_count: 145, moderate_count: 78, bad_count: 42 }
+                    ],
+                    status_trend_data: {
+                        'Yaxshi': [120, 125, 130, 132, 135, 138, 140, 142, 143, 144, 145, 145],
+                        'Oʻrtacha': [65, 68, 70, 72, 73, 75, 76, 77, 77, 78, 78, 78],
+                        'Xavfli': [35, 38, 40, 39, 41, 42, 43, 42, 41, 42, 42, 42]
+                    },
+                    by_industry: [
+                        { industry: "Qurilish", count: 45, color: "#3b82f6" },
+                        { industry: "Metallurgiya", count: 32, color: "#8b5cf6" },
+                        { industry: "Kimyo", count: 28, color: "#06b6d4" },
+                        { industry: "Oziq-ovqat", count: 56, color: "#10b981" },
+                        { industry: "To'qimachilik", count: 41, color: "#f59e0b" },
+                        { industry: "Energiya", count: 23, color: "#ef4444" },
+                        { industry: "Transport", count: 40, color: "#6366f1" }
+                    ]
+                };
+
+                // Update report stats
+                document.getElementById('report-total').textContent = mockData.stats.total_companies;
+                document.getElementById('report-dangerous').textContent = mockData.stats.dangerous_companies;
+                document.getElementById('report-penalties').textContent = mockData.stats.active_penalties;
+
+                // Status pie chart
+                const statusLabels = mockData.by_status.map(s => s.status);
+                const statusValues = mockData.by_status.map(s => s.count);
+                const statusColors = mockData.by_status.map(s => s.color);
+
+                const ctx1 = document.getElementById('statusPieChart').getContext('2d');
+                if (statusPieChart) statusPieChart.destroy();
+                statusPieChart = new Chart(ctx1, {
+                    type: 'pie',
+                    data: {
+                        labels: statusLabels,
+                        datasets: [{
+                            data: statusValues,
+                            backgroundColor: statusColors,
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { 
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Status trend chart
+                const monthlyLabels = mockData.monthly_trend.map(m => m.label);
+                const trendData = mockData.status_trend_data;
+                
+                const ctx2 = document.getElementById('statusTrendChart').getContext('2d');
+                if (statusTrendChart) statusTrendChart.destroy();
+                statusTrendChart = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: monthlyLabels,
+                        datasets: [
+                            {
+                                label: 'Yaxshi',
+                                data: trendData['Yaxshi'],
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                fill: true,
+                                tension: 0.2
+                            },
+                            {
+                                label: 'Oʻrtacha',
+                                data: trendData['Oʻrtacha'],
+                                borderColor: '#f59e0b',
+                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                fill: true,
+                                tension: 0.2
+                            },
+                            {
+                                label: 'Xavfli',
+                                data: trendData['Xavfli'],
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                fill: true,
+                                tension: 0.2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { 
+                            legend: { position: 'top' },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Korxonalar soni'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Oylar'
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+
+                // Industry bar chart
+                const industryLabels = mockData.by_industry.map(i => i.industry);
+                const industryValues = mockData.by_industry.map(i => i.count);
+                const industryColors = mockData.by_industry.map(i => i.color);
+
+                const ctx3 = document.getElementById('industryBarChart').getContext('2d');
+                if (industryBarChart) industryBarChart.destroy();
+                industryBarChart = new Chart(ctx3, {
+                    type: 'bar',
+                    data: {
+                        labels: industryLabels,
+                        datasets: [{
+                            label: 'Korxonalar soni',
+                            data: industryValues,
+                            backgroundColor: industryColors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Korxonalar soni: ${context.raw}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Korxonalar soni'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Sanoat turlari'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Initial render
+            fetchAndRender();
+
+            // Download handler
+            const downloadBtn = document.getElementById('download-report-btn');
+            downloadBtn.addEventListener('click', () => {
+                const periodType = reportTypeEl.value;
+                const year = yearSelect.value;
+                const month = reportMonthEl.value;
+                const params = new URLSearchParams({ report_type: periodType, year: year });
+                if (periodType === 'monthly') params.append('month', month);
+
+                // trigger download
+                window.location = `/download-report/?${params.toString()}`;
+            });
+        });
+
+        // Notification function
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' :
+                type === 'error' ? 'bg-red-500 text-white' :
+                type === 'warning' ? 'bg-yellow-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</body>
+</html>

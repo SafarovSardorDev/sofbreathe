@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirish - Ekologiya Monitoring Tizimi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #fefeff 0%, #f0eef1 100%);
+        }
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            max-width: 400px;
+            width: 90%;
+            margin: 20px;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .tab-button.active {
+            color: #2563eb;
+            font-weight: 600;
+        }
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #2563eb;
+        }
+        .input-field {
+            transition: all 0.3s ease;
+            border: 1px solid #d1d5db;
+        }
+        .input-field:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .btn-primary {
+            background: #2563eb;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+        .error-message {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .success-message {
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <!-- Header -->
+        <div class="px-6 py-8 text-center border-b border-gray-100">
+            <div class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-leaf text-white text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800 mb-1">Ekologiya Monitoring</h1>
+            <p class="text-gray-600 text-sm">Toshkent Shahri</p>
+        </div>
+
+        <!-- Xatolik/Success xabarlari -->
+        {% if messages %}
+        <div class="px-6 pt-4">
+            {% for message in messages %}
+                <div class="{% if message.tags == 'error' %}error-message{% else %}success-message{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if form.errors %}
+        <div class="px-6 pt-4">
+            <div class="error-message">
+                Login yoki parol noto'g'ri. Iltimos, qaytadan urinib ko'ring.
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tabs -->
+        <div class="flex border-b border-gray-200">
+            <button type="button" onclick="switchTab('committee')" id="tab-committee" class="tab-button active flex-1 py-4 text-center text-gray-600">
+                <i class="fas fa-user-shield mr-2"></i>Qo'mita
+            </button>
+            <button type="button" onclick="switchTab('factory')" id="tab-factory" class="tab-button flex-1 py-4 text-center text-gray-600">
+                <i class="fas fa-industry mr-2"></i>Korxona
+            </button>
+        </div>
+
+        <!-- Committee Login Form -->
+        <div id="committee-form" class="p-6 fade-in">
+            <form method="post" id="committee-login-form">
+                {% csrf_token %}
+                <input type="hidden" name="user_type" value="committee">
+                
+                <div class="mb-4">
+                    <label for="committee-username" class="block text-sm font-medium text-gray-700 mb-2">Xodim ID</label>
+                    <input type="text" id="committee-username" name="username" placeholder="EKO-2024-001" 
+                           class="input-field w-full px-4 py-3 rounded-lg" required
+                           value="{% if form.username.value %}{{ form.username.value }}{% endif %}">
+                </div>
+                <div class="mb-6">
+                    <label for="committee-password" class="block text-sm font-medium text-gray-700 mb-2">Parol</label>
+                    <input type="password" id="committee-password" name="password" placeholder="••••••••" 
+                           class="input-field w-full px-4 py-3 rounded-lg" required>
+                </div>
+                <button type="submit" class="btn-primary w-full py-3 text-white font-medium rounded-lg">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Kirish
+                </button>
+            </form>
+        </div>
+
+        <!-- Factory Login Form -->
+        <div id="factory-form" class="p-6 hidden fade-in">
+            <form method="post" id="factory-login-form">
+                {% csrf_token %}
+                <input type="hidden" name="user_type" value="factory">
+                
+                <div class="mb-4">
+                    <label for="factory-username" class="block text-sm font-medium text-gray-700 mb-2">STIR raqami</label>
+                    <input type="text" id="factory-username" name="username" placeholder="123456789" maxlength="9" 
+                           class="input-field w-full px-4 py-3 rounded-lg" required
+                           value="{% if form.username.value %}{{ form.username.value }}{% endif %}">
+                </div>
+                <div class="mb-6">
+                    <label for="factory-password" class="block text-sm font-medium text-gray-700 mb-2">Parol</label>
+                    <input type="password" id="factory-password" name="password" placeholder="••••••••" 
+                           class="input-field w-full px-4 py-3 rounded-lg" required>
+                </div>
+                <button type="submit" class="btn-primary w-full py-3 text-white font-medium rounded-lg">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Kirish
+                </button>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 text-center border-t border-gray-100">
+            <p class="text-gray-500 text-xs">
+                &copy; 2024 Toshkent Shahri Ekologiya Qo'mitasi
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            const committeeTab = document.getElementById('tab-committee');
+            const factoryTab = document.getElementById('tab-factory');
+            const committeeForm = document.getElementById('committee-form');
+            const factoryForm = document.getElementById('factory-form');
+
+            if (tab === 'committee') {
+                committeeTab.classList.add('active');
+                factoryTab.classList.remove('active');
+                committeeForm.classList.remove('hidden');
+                factoryForm.classList.add('hidden');
+                
+                // Form action ni o'zgartirish
+                document.getElementById('committee-login-form').style.display = 'block';
+                document.getElementById('factory-login-form').style.display = 'none';
+            } else {
+                factoryTab.classList.add('active');
+                committeeTab.classList.remove('active');
+                factoryForm.classList.remove('hidden');
+                committeeForm.classList.add('hidden');
+                
+                // Form action ni o'zgartirish
+                document.getElementById('factory-login-form').style.display = 'block';
+                document.getElementById('committee-login-form').style.display = 'none';
+            }
+        }
+
+        // Formlarni yuborish
+        function handleFormSubmit(event, userType) {
+            event.preventDefault();
+            const form = event.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            // Loading state
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Kirilmoqda...';
+            btn.disabled = true;
+            
+            // Formni yuborish
+            form.submit();
+        }
+
+        // Form submit event listenerlar
+        document.getElementById('committee-login-form').addEventListener('submit', function(e) {
+            handleFormSubmit(e, 'committee');
+        });
+        
+        document.getElementById('factory-login-form').addEventListener('submit', function(e) {
+            handleFormSubmit(e, 'factory');
+        });
+
+        // Sayt yuklanganda default formni ko'rsatish
+        document.addEventListener('DOMContentLoaded', function() {
+            // Agar xatolik bo'lsa, mos tabni ko'rsatish
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorType = urlParams.get('error');
+            
+            if (errorType === 'factory') {
+                switchTab('factory');
+            } else {
+                switchTab('committee');
+            }
+            
+            // Input fieldlarga autofocus
+            const activeForm = document.querySelector('form:not([style*="display: none"])');
+            if (activeForm) {
+                const firstInput = activeForm.querySelector('input[type="text"], input[type="password"]');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            }
+        });
+
+        // Enter tugmasini bosganda formni yuborish
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const activeForm = document.querySelector('form:not([style*="display: none"])');
+                if (activeForm) {
+                    const submitBtn = activeForm.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.click();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

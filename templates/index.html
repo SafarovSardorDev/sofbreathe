@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toshkent Shahri Sanoat Korxonalari Monitoringi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Leaflet konteyner elementlarini pastroq qilib qo'yamiz (agar kerak bo'lsa) */
+        .leaflet-container {
+        z-index: 0 !important;
+        }
+
+        #map {
+            height: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            min-height: 300px;
+            position: relative;
+            z-index: 0;
+        }
+        .custom-marker {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        .sensor-indicator {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        .sensor-active {
+            background-color: #10b981;
+            animation: pulse 2s infinite;
+        }
+        .sensor-inactive {
+            background-color: #6b7280;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-good {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .status-moderate {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        }
+        .status-bad {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+        }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .mobile-table {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .desktop-table {
+                display: none;
+            }
+            .mobile-table {
+                display: block;
+            }
+            #map {
+                height: 400px;
+            }
+            .stats-card, .card-hover {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="sticky-header shadow-md border-b border-gray-200">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-leaf text-white text-lg sm:text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Toshkent Shahri Ekologik Monitoring</h1>
+                        <p class="text-xs sm:text-sm text-gray-500">Sanoat korxonalari nazorati</p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between sm:justify-end space-x-4">
+                    <div class="flex items-center space-x-2 text-gray-600">
+                        <div class="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs sm:text-sm">Real vaqt</span>
+                    </div>
+                    <a href="{% url 'login' %}" class="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center space-x-2 text-sm">
+                        <i class="fas fa-user-shield"></i>
+                        <span class="hidden sm:inline">Kirish</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div class="stats-card col-span-2 lg:col-span-1">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="text-white/80 text-xs sm:text-sm font-medium">Toshkentdagi korxonalar</div>
+                    <i class="fas fa-industry text-white/60 text-lg sm:text-xl"></i>
+                </div>
+                <div class="text-2xl sm:text-4xl font-bold text-white mb-1">42</div>
+                <div class="text-white/70 text-xs">Monitoring ostida</div>
+            </div>
+            
+            <div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg card-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="text-gray-600 text-xs sm:text-sm font-medium">Yaxshi holat</div>
+                    <div class="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
+                </div>
+                <div class="text-2xl sm:text-4xl font-bold text-gray-800 mb-1">18</div>
+                <div class="text-green-600 text-xs sm:text-sm font-medium">42.9% korxonalar</div>
+            </div>
+            
+            <div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg card-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="text-gray-600 text-xs sm:text-sm font-medium">O'rtacha holat</div>
+                    <div class="w-2 h-2 sm:w-3 sm:h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                </div>
+                <div class="text-2xl sm:text-4xl font-bold text-gray-800 mb-1">14</div>
+                <div class="text-yellow-600 text-xs sm:text-sm font-medium">33.3% korxonalar</div>
+            </div>
+            
+            <div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg card-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="text-gray-600 text-xs sm:text-sm font-medium">Xavfli holat</div>
+                    <div class="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full animate-pulse"></div>
+                </div>
+                <div class="text-2xl sm:text-4xl font-bold text-gray-800 mb-1">10</div>
+                <div class="text-red-600 text-xs sm:text-sm font-medium">23.8% korxonalar</div>
+            </div>
+        </div>
+
+        <!-- Xarita -->
+        <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 space-y-3 sm:space-y-0">
+                <h2 class="text-lg sm:text-2xl font-bold text-gray-800">Toshkent Shahri Interaktiv Xaritasi</h2>
+                <div class="flex space-x-2 overflow-x-auto pb-2 sm:pb-0">
+                    <button class="px-3 py-1.5 sm:px-4 sm:py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition flex items-center space-x-2 text-xs sm:text-sm whitespace-nowrap">
+                        <span class="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full"></span>
+                        <span>Yaxshi</span>
+                    </button>
+                    <button class="px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition flex items-center space-x-2 text-xs sm:text-sm whitespace-nowrap">
+                        <span class="w-2 h-2 sm:w-3 sm:h-3 bg-yellow-500 rounded-full"></span>
+                        <span>O'rtacha</span>
+                    </button>
+                    <button class="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition flex items-center space-x-2 text-xs sm:text-sm whitespace-nowrap">
+                        <span class="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full"></span>
+                        <span>Xavfli</span>
+                    </button>
+                </div>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- Top 10 Reyting -->
+        <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden mb-6 sm:mb-8">
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg sm:text-2xl font-bold text-gray-800">Top 10 Eng Ko'p Zaharli Gaz Chiqaruvchi Korxonalar</h2>
+                <p class="text-gray-600 mt-1 text-sm">Real vaqt reytingi</p>
+            </div>
+            
+            <!-- Desktop Table -->
+            <div class="desktop-table overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b-2 border-gray-200 bg-gray-50">
+                            <th class="text-left py-3 px-4 sm:py-4 sm:px-6 font-semibold text-gray-700 text-xs sm:text-sm">#</th>
+                            <th class="text-left py-3 px-4 sm:py-4 sm:px-6 font-semibold text-gray-700 text-xs sm:text-sm">Korxona nomi</th>
+                            <th class="text-left py-3 px-4 sm:py-4 sm:px-6 font-semibold text-gray-700 text-xs sm:text-sm">Tuman</th>
+                            <th class="text-left py-3 px-4 sm:py-4 sm:px-6 font-semibold text-gray-700 text-xs sm:text-sm">Sanoat turi</th>
+                            <th class="text-center py-3 px-4 sm:py-4 sm:px-6 font-semibold text-gray-700 text-xs sm:text-sm">Zaharli gaz</th>
+                            <th class="text-center py-3 px-4 sm:py-4 sm:px-6 font-semibold text-gray-700 text-xs sm:text-sm">Ruxsat etilgan</th>
+                            <th class="text-center py-3 px-4 sm:py-4 sm:px-6 font-semibold text-gray-700 text-xs sm:text-sm">Holat</th>
+                            <th class="text-center py-3 px-4 sm:py-4 sm:px-6 font-semibold text-gray-700 text-xs sm:text-sm">Jarima</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top10-table">
+                        <!-- JavaScript bilan to'ldiriladi -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Mobile Cards -->
+            <div class="mobile-table p-4 space-y-4" id="top10-mobile">
+                <!-- JavaScript bilan to'ldiriladi -->
+            </div>
+        </div>
+
+        <!-- Jarima Hisoblagich -->
+        <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
+            <h2 class="text-lg sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 text-center">Jarima Hisoblagich</h2>
+            
+            <div class="max-w-2xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Zaharli gaz miqdori (kg/soat)</label>
+                        <input type="number" id="gas-amount" class="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base" placeholder="Masalan: 150">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ruxsat etilgan maksimal miqdor (kg/soat)</label>
+                        <input type="number" id="max-allowed" class="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base" placeholder="Masalan: 100">
+                    </div>
+                </div>
+                
+                <button id="calculate-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 sm:py-3 px-4 rounded-lg transition duration-200 mb-4 sm:mb-6 text-sm sm:text-base">
+                    Jarimani hisobla
+                </button>
+                
+                <div id="result" class="hidden p-4 sm:p-6 bg-gray-50 rounded-lg border border-gray-200">
+                    <h3 class="font-medium text-gray-800 mb-3 sm:mb-4 text-lg">Hisob natijalari:</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                        <div class="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
+                            <div class="text-xs sm:text-sm text-gray-600 mb-1">Oshib ketgan miqdor:</div>
+                            <div id="excess-amount" class="text-xl sm:text-2xl font-bold text-red-600">0 kg</div>
+                        </div>
+                        <div class="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
+                            <div class="text-xs sm:text-sm text-gray-600 mb-1">Ekish kerak bo'lgan daraxtlar:</div>
+                            <div id="trees-needed" class="text-xl sm:text-2xl font-bold text-green-600">0 ta</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 sm:mt-8 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200 max-w-2xl mx-auto">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-blue-500 text-lg sm:text-xl mt-0.5 sm:mt-1 mr-2 sm:mr-3"></i>
+                    <div>
+                        <h3 class="font-medium text-blue-800 mb-1 sm:mb-2 text-sm sm:text-base">Ma'lumot</h3>
+                        <p class="text-blue-700 text-xs sm:text-sm">
+                            Xalqaro standartlarga ko'ra, 1 ta katta daraxt yiliga 22 kg CO₂ yutadi. 
+                            Jarimalar shu asosda hisoblanadi (1 kg ortiqcha gaz uchun 10 ta daraxt).
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Yangiliklar va Statistika -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
+            <!-- Yangiliklar -->
+            <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+                <h2 class="text-lg sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">So'nggi Yangiliklar</h2>
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div class="flex items-start">
+                            <i class="fas fa-tree text-green-500 text-lg sm:text-xl mt-0.5 sm:mt-1 mr-2 sm:mr-3"></i>
+                            <div>
+                                <h3 class="font-medium text-green-800 mb-1 sm:mb-2 text-sm sm:text-base">Yashil Toshkent Loyihasi</h3>
+                                <p class="text-green-700 text-xs sm:text-sm">
+                                    Shaharda 10,000 yangi daraxt ekish ishlari boshlandi. Loyiha shahar ekologiyasini yaxshilashga qaratilgan.
+                                </p>
+                                <span class="text-xs text-green-600 mt-1 sm:mt-2 block">2 kun oldin</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div class="flex items-start">
+                            <i class="fas fa-industry text-blue-500 text-lg sm:text-xl mt-0.5 sm:mt-1 mr-2 sm:mr-3"></i>
+                            <div>
+                                <h3 class="font-medium text-blue-800 mb-1 sm:mb-2 text-sm sm:text-base">Yangi Monitoring Tizimi</h3>
+                                <p class="text-blue-700 text-xs sm:text-sm">
+                                    Toshkent shahridagi barcha sanoat korxonalari real vaqt rejimida monitoring qilinmoqda.
+                                </p>
+                                <span class="text-xs text-blue-600 mt-1 sm:mt-2 block">1 hafta oldin</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistika -->
+            <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+                <h2 class="text-lg sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Ekologik Statistika</h2>
+                <div class="space-y-3 sm:space-y-4">
+                    <div class="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full mr-2 sm:mr-3"></div>
+                            <span class="text-gray-700 font-medium text-sm sm:text-base">Yil davomida ekilgan daraxtlar</span>
+                        </div>
+                        <span class="font-bold text-gray-800 text-sm sm:text-base">5,240 ta</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 sm:w-3 sm:h-3 bg-blue-500 rounded-full mr-2 sm:mr-3"></div>
+                            <span class="text-gray-700 font-medium text-sm sm:text-base">Atmosferaga chiqqan CO₂ kamayishi</span>
+                        </div>
+                        <span class="font-bold text-gray-800 text-sm sm:text-base">262 tonna</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 sm:w-3 sm:h-3 bg-purple-500 rounded-full mr-2 sm:mr-3"></div>
+                            <span class="text-gray-700 font-medium text-sm sm:text-base">Jami jarimalar soni</span>
+                        </div>
+                        <span class="font-bold text-gray-800 text-sm sm:text-base">48 ta</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 sm:w-3 sm:h-3 bg-yellow-500 rounded-full mr-2 sm:mr-3"></div>
+                            <span class="text-gray-700 font-medium text-sm sm:text-base">Bajarilgan jarimalar</span>
+                        </div>
+                        <span class="font-bold text-gray-800 text-sm sm:text-base">32 ta</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-white border-t border-gray-200 mt-8 sm:mt-12">
+        <div class="container mx-auto px-4 py-4 sm:py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center space-x-2 mb-3 sm:mb-4 md:mb-0">
+                    <i class="fas fa-leaf text-green-500"></i>
+                    <span class="text-gray-600 font-medium text-sm sm:text-base">Toshkent Shahri Ekologiya Qo'mitasi</span>
+                </div>
+                <div class="text-gray-500 text-xs sm:text-sm">
+                    &copy; 2023 Toshkent Shahri Hokimligi. Barcha huquqlar himoyalangan.
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Toshkent shahridagi korxonalar ma'lumotlari
+        const companies = [
+            { id: 1, name: "Almaliq KMK Filiali", region: "Olmazor tumani", type: "Metallurgiya", lat: 41.3485, lng: 69.2138, gasAmount: 156, maxAllowed: 100, status: "bad", sensor: true },
+            { id: 2, name: "Chirchiq EKZ", region: "Yashnobod tumani", type: "Kimyo", lat: 41.2688, lng: 69.3821, gasAmount: 89, maxAllowed: 80, status: "moderate", sensor: true },
+            { id: 3, name: "Toshkent Traktor Zavodi", region: "Mirzo Ulug'bek tumani", type: "Mashinasozlik", lat: 41.3654, lng: 69.3234, gasAmount: 45, maxAllowed: 60, status: "good", sensor: true },
+            { id: 4, name: "Toshkent Avtomobil Zavodi", region: "Sergeli tumani", type: "Mashinasozlik", lat: 41.2154, lng: 69.2234, gasAmount: 52, maxAllowed: 70, status: "good", sensor: true },
+            { id: 5, name: "Toshkent Kimyo Zavodi", region: "Yunusobod tumani", type: "Kimyo", lat: 41.3654, lng: 69.2934, gasAmount: 112, maxAllowed: 90, status: "moderate", sensor: true },
+            { id: 6, name: "Toshkent Plastmassa Zavodi", region: "Chilonzor tumani", type: "Kimyo", lat: 41.2854, lng: 69.2034, gasAmount: 134, maxAllowed: 100, status: "bad", sensor: true },
+            { id: 7, name: "Toshkent Oziq-ovqat Kombinati", region: "Shayxontohur tumani", type: "Oziq-ovqat", lat: 41.3154, lng: 69.2434, gasAmount: 38, maxAllowed: 50, status: "good", sensor: true },
+            { id: 8, name: "Toshkent Qurilish Materiallari", region: "Yakkasaroy tumani", type: "Qurilish", lat: 41.2954, lng: 69.2734, gasAmount: 68, maxAllowed: 75, status: "good", sensor: true },
+            { id: 9, name: "Toshkent Energiya Markazi", region: "Mirobod tumani", type: "Energetika", lat: 41.3354, lng: 69.2534, gasAmount: 95, maxAllowed: 110, status: "good", sensor: true },
+            { id: 10, name: "Toshkent To'qimachilik Kombinati", region: "Uchtepa tumani", type: "Yengil sanoat", lat: 41.2454, lng: 69.1934, gasAmount: 42, maxAllowed: 65, status: "good", sensor: true }
+        ];
+
+        // Xaritani yaratish (Toshkent markazi)
+        const map = L.map('map').setView([41.3111, 69.2406], 11);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Markerlarni qo'shish
+        companies.forEach(company => {
+            const statusClass = company.status === 'good' ? 'status-good' : 
+                              company.status === 'moderate' ? 'status-moderate' : 'status-bad';
+            const sensorClass = company.sensor ? 'sensor-active' : 'sensor-inactive';
+            
+            const markerHtml = `
+                <div class="custom-marker ${statusClass}">
+                    <span class="text-white">${company.gasAmount}</span>
+                    <div class="sensor-indicator ${sensorClass}"></div>
+                </div>
+            `;
+            
+            const icon = L.divIcon({
+                html: markerHtml,
+                className: '',
+                iconSize: [50, 50]
+            });
+            
+            const marker = L.marker([company.lat, company.lng], { icon: icon }).addTo(map);
+            
+            const statusText = company.status === 'good' ? 'Yaxshi' : 
+                             company.status === 'moderate' ? "O'rtacha" : 'Xavfli';
+            const sensorText = company.sensor ? 'Ishlayapti' : 'Ishlamayapti';
+            
+            // Jarima hisoblash
+            let penaltyText = '-';
+            if (company.gasAmount > company.maxAllowed) {
+                const excessGas = company.gasAmount - company.maxAllowed;
+                const treesNeeded = Math.ceil(excessGas * 10);
+                penaltyText = `${treesNeeded} ta daraxt`;
+            }
+            
+            marker.bindPopup(`
+                <div class="p-3 sm:p-4 min-w-[250px] sm:min-w-[280px]">
+                    <h3 class="font-bold text-base sm:text-lg mb-2 sm:mb-3 text-gray-800">${company.name}</h3>
+                    <div class="space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Tuman:</span>
+                            <span class="font-medium">${company.region}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Sanoat:</span>
+                            <span class="font-medium">${company.type}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Zaharli gaz:</span>
+                            <span class="font-bold">${company.gasAmount} kg/soat</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Ruxsat etilgan:</span>
+                            <span class="font-medium">${company.maxAllowed} kg/soat</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Holat:</span>
+                            <span class="font-semibold ${company.status === 'good' ? 'text-green-600' : company.status === 'moderate' ? 'text-yellow-600' : 'text-red-600'}">${statusText}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Datchik:</span>
+                            <span class="font-medium">${sensorText}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Jarima:</span>
+                            <span class="font-bold ${penaltyText !== '-' ? 'text-red-600' : 'text-gray-600'}">${penaltyText}</span>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+
+        // Top 10 reytingini to'ldirish
+        const top10Table = document.getElementById('top10-table');
+        const top10Mobile = document.getElementById('top10-mobile');
+        const sortedCompanies = [...companies].sort((a, b) => b.gasAmount - a.gasAmount).slice(0, 10);
+        
+        // Desktop table
+        sortedCompanies.forEach((company, index) => {
+            const statusColor = company.status === 'good' ? 'bg-green-100 text-green-800' : 
+                              company.status === 'moderate' ? 'bg-yellow-100 text-yellow-800' : 
+                              'bg-red-100 text-red-800';
+            const statusText = company.status === 'good' ? 'Yaxshi' : 
+                             company.status === 'moderate' ? "O'rtacha" : 'Xavfli';
+            
+            // Jarima hisoblash
+            let penaltyText = '-';
+            if (company.gasAmount > company.maxAllowed) {
+                const excessGas = company.gasAmount - company.maxAllowed;
+                const treesNeeded = Math.ceil(excessGas * 10);
+                penaltyText = `${treesNeeded} ta daraxt`;
+            }
+            
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-100 hover:bg-gray-50 transition';
+            
+            row.innerHTML = `
+                <td class="py-3 px-4 sm:py-4 sm:px-6 text-gray-600 font-medium text-xs sm:text-sm">${index + 1}</td>
+                <td class="py-3 px-4 sm:py-4 sm:px-6">
+                    <div class="font-semibold text-gray-800 text-xs sm:text-sm">${company.name}</div>
+                </td>
+                <td class="py-3 px-4 sm:py-4 sm:px-6 text-gray-600 text-xs sm:text-sm">${company.region}</td>
+                <td class="py-3 px-4 sm:py-4 sm:px-6 text-gray-600 text-xs sm:text-sm">${company.type}</td>
+                <td class="py-3 px-4 sm:py-4 sm:px-6 text-center font-bold text-gray-800 text-xs sm:text-sm">${company.gasAmount} kg/soat</td>
+                <td class="py-3 px-4 sm:py-4 sm:px-6 text-center text-gray-600 text-xs sm:text-sm">${company.maxAllowed} kg/soat</td>
+                <td class="py-3 px-4 sm:py-4 sm:px-6 text-center">
+                    <span class="px-2 py-1 ${statusColor} rounded-full text-xs font-medium">${statusText}</span>
+                </td>
+                <td class="py-3 px-4 sm:py-4 sm:px-6 text-center font-medium ${penaltyText !== '-' ? 'text-red-600' : 'text-gray-600'} text-xs sm:text-sm">${penaltyText}</td>
+            `;
+            
+            top10Table.appendChild(row);
+        });
+
+        // Mobile cards
+        sortedCompanies.forEach((company, index) => {
+            const statusColor = company.status === 'good' ? 'bg-green-100 text-green-800' : 
+                              company.status === 'moderate' ? 'bg-yellow-100 text-yellow-800' : 
+                              'bg-red-100 text-red-800';
+            const statusText = company.status === 'good' ? 'Yaxshi' : 
+                             company.status === 'moderate' ? "O'rtacha" : 'Xavfli';
+            
+            // Jarima hisoblash
+            let penaltyText = '-';
+            if (company.gasAmount > company.maxAllowed) {
+                const excessGas = company.gasAmount - company.maxAllowed;
+                const treesNeeded = Math.ceil(excessGas * 10);
+                penaltyText = `${treesNeeded} ta daraxt`;
+            }
+            
+            const card = document.createElement('div');
+            card.className = 'bg-gray-50 rounded-lg p-4 border border-gray-200';
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center">
+                        <span class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">${index + 1}</span>
+                        <h3 class="font-semibold text-gray-800 text-sm">${company.name}</h3>
+                    </div>
+                    <span class="px-2 py-1 ${statusColor} rounded-full text-xs font-medium">${statusText}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <span class="text-gray-600">Tuman:</span>
+                        <div class="font-medium">${company.region}</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Sanoat:</span>
+                        <div class="font-medium">${company.type}</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Zaharli gaz:</span>
+                        <div class="font-bold">${company.gasAmount} kg/soat</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Ruxsat etilgan:</span>
+                        <div class="font-medium">${company.maxAllowed} kg/soat</div>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="text-gray-600">Jarima:</span>
+                        <div class="font-medium ${penaltyText !== '-' ? 'text-red-600' : 'text-gray-600'}">${penaltyText}</div>
+                    </div>
+                </div>
+            `;
+            
+            top10Mobile.appendChild(card);
+        });
+
+        // Jarima hisoblagich
+        const calculateBtn = document.getElementById('calculate-btn');
+        const gasAmountInput = document.getElementById('gas-amount');
+        const maxAllowedInput = document.getElementById('max-allowed');
+        const resultDiv = document.getElementById('result');
+        const excessAmountSpan = document.getElementById('excess-amount');
+        const treesNeededSpan = document.getElementById('trees-needed');
+        
+        calculateBtn.addEventListener('click', function() {
+            const gasAmount = parseFloat(gasAmountInput.value);
+            const maxAllowed = parseFloat(maxAllowedInput.value);
+            
+            if (isNaN(gasAmount) || isNaN(maxAllowed)) {
+                alert('Iltimos, barcha maydonlarni to\'ldiring!');
+                return;
+            }
+            
+            if (gasAmount <= maxAllowed) {
+                excessAmountSpan.textContent = '0 kg';
+                treesNeededSpan.textContent = '0 ta';
+                resultDiv.classList.remove('hidden');
+                return;
+            }
+            
+            const excessGas = gasAmount - maxAllowed;
+            // 1 kg ortiqcha gaz uchun 10 ta daraxt ekish kerak (xalqaro standartlarga asoslangan)
+            const treesNeeded = Math.ceil(excessGas * 10);
+            
+            excessAmountSpan.textContent = `${excessGas} kg`;
+            treesNeededSpan.textContent = `${treesNeeded} ta`;
+            resultDiv.classList.remove('hidden');
+        });
+
+        // Real vaqt yangilanishi simulyatsiyasi
+        function updateRealTimeData() {
+            // Tasodifiy korxona ma'lumotlarini yangilash
+            const randomIndex = Math.floor(Math.random() * companies.length);
+            const changeAmount = Math.floor(Math.random() * 20) - 10; // -10 dan +10 gacha o'zgarish
+            
+            companies[randomIndex].gasAmount = Math.max(0, companies[randomIndex].gasAmount + changeAmount);
+            
+            // Statusni yangilash
+            if (companies[randomIndex].gasAmount <= companies[randomIndex].maxAllowed) {
+                companies[randomIndex].status = 'good';
+            } else if (companies[randomIndex].gasAmount <= companies[randomIndex].maxAllowed * 1.2) {
+                companies[randomIndex].status = 'moderate';
+            } else {
+                companies[randomIndex].status = 'bad';
+            }
+            
+            // Xaritani yangilash
+            map.eachLayer(layer => {
+                if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            // Yangilangan markerlarni qo'shish
+            companies.forEach(company => {
+                const statusClass = company.status === 'good' ? 'status-good' : 
+                                  company.status === 'moderate' ? 'status-moderate' : 'status-bad';
+                const sensorClass = company.sensor ? 'sensor-active' : 'sensor-inactive';
+                
+                const markerHtml = `
+                    <div class="custom-marker ${statusClass}">
+                        <span class="text-white">${company.gasAmount}</span>
+                        <div class="sensor-indicator ${sensorClass}"></div>
+                    </div>
+                `;
+                
+                const icon = L.divIcon({
+                    html: markerHtml,
+                    className: '',
+                    iconSize: [50, 50]
+                });
+                
+                const marker = L.marker([company.lat, company.lng], { icon: icon }).addTo(map);
+                
+                const statusText = company.status === 'good' ? 'Yaxshi' : 
+                                 company.status === 'moderate' ? "O'rtacha" : 'Xavfli';
+                const sensorText = company.sensor ? 'Ishlayapti' : 'Ishlamayapti';
+                
+                // Jarima hisoblash
+                let penaltyText = '-';
+                if (company.gasAmount > company.maxAllowed) {
+                    const excessGas = company.gasAmount - company.maxAllowed;
+                    const treesNeeded = Math.ceil(excessGas * 10);
+                    penaltyText = `${treesNeeded} ta daraxt`;
+                }
+                
+                marker.bindPopup(`
+                    <div class="p-3 sm:p-4 min-w-[250px] sm:min-w-[280px]">
+                        <h3 class="font-bold text-base sm:text-lg mb-2 sm:mb-3 text-gray-800">${company.name}</h3>
+                        <div class="space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Tuman:</span>
+                                <span class="font-medium">${company.region}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Sanoat:</span>
+                                <span class="font-medium">${company.type}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Zaharli gaz:</span>
+                                <span class="font-bold">${company.gasAmount} kg/soat</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Ruxsat etilgan:</span>
+                                <span class="font-medium">${company.maxAllowed} kg/soat</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Holat:</span>
+                                <span class="font-semibold ${company.status === 'good' ? 'text-green-600' : company.status === 'moderate' ? 'text-yellow-600' : 'text-red-600'}">${statusText}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Datchik:</span>
+                                <span class="font-medium">${sensorText}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Jarima:</span>
+                                <span class="font-bold ${penaltyText !== '-' ? 'text-red-600' : 'text-gray-600'}">${penaltyText}</span>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+            
+            // Top 10 reytingini yangilash
+            top10Table.innerHTML = '';
+            top10Mobile.innerHTML = '';
+            const updatedSortedCompanies = [...companies].sort((a, b) => b.gasAmount - a.gasAmount).slice(0, 10);
+            
+            // Desktop table yangilash
+            updatedSortedCompanies.forEach((company, index) => {
+                const statusColor = company.status === 'good' ? 'bg-green-100 text-green-800' : 
+                                  company.status === 'moderate' ? 'bg-yellow-100 text-yellow-800' : 
+                                  'bg-red-100 text-red-800';
+                const statusText = company.status === 'good' ? 'Yaxshi' : 
+                                 company.status === 'moderate' ? "O'rtacha" : 'Xavfli';
+                
+                // Jarima hisoblash
+                let penaltyText = '-';
+                if (company.gasAmount > company.maxAllowed) {
+                    const excessGas = company.gasAmount - company.maxAllowed;
+                    const treesNeeded = Math.ceil(excessGas * 10);
+                    penaltyText = `${treesNeeded} ta daraxt`;
+                }
+                
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100 hover:bg-gray-50 transition';
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4 sm:py-4 sm:px-6 text-gray-600 font-medium text-xs sm:text-sm">${index + 1}</td>
+                    <td class="py-3 px-4 sm:py-4 sm:px-6">
+                        <div class="font-semibold text-gray-800 text-xs sm:text-sm">${company.name}</div>
+                    </td>
+                    <td class="py-3 px-4 sm:py-4 sm:px-6 text-gray-600 text-xs sm:text-sm">${company.region}</td>
+                    <td class="py-3 px-4 sm:py-4 sm:px-6 text-gray-600 text-xs sm:text-sm">${company.type}</td>
+                    <td class="py-3 px-4 sm:py-4 sm:px-6 text-center font-bold text-gray-800 text-xs sm:text-sm">${company.gasAmount} kg/soat</td>
+                    <td class="py-3 px-4 sm:py-4 sm:px-6 text-center text-gray-600 text-xs sm:text-sm">${company.maxAllowed} kg/soat</td>
+                    <td class="py-3 px-4 sm:py-4 sm:px-6 text-center">
+                        <span class="px-2 py-1 ${statusColor} rounded-full text-xs font-medium">${statusText}</span>
+                    </td>
+                    <td class="py-3 px-4 sm:py-4 sm:px-6 text-center font-medium ${penaltyText !== '-' ? 'text-red-600' : 'text-gray-600'} text-xs sm:text-sm">${penaltyText}</td>
+                `;
+                
+                top10Table.appendChild(row);
+            });
+
+            // Mobile cards yangilash
+            updatedSortedCompanies.forEach((company, index) => {
+                const statusColor = company.status === 'good' ? 'bg-green-100 text-green-800' : 
+                                  company.status === 'moderate' ? 'bg-yellow-100 text-yellow-800' : 
+                                  'bg-red-100 text-red-800';
+                const statusText = company.status === 'good' ? 'Yaxshi' : 
+                                 company.status === 'moderate' ? "O'rtacha" : 'Xavfli';
+                
+                // Jarima hisoblash
+                let penaltyText = '-';
+                if (company.gasAmount > company.maxAllowed) {
+                    const excessGas = company.gasAmount - company.maxAllowed;
+                    const treesNeeded = Math.ceil(excessGas * 10);
+                    penaltyText = `${treesNeeded} ta daraxt`;
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'bg-gray-50 rounded-lg p-4 border border-gray-200';
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center">
+                            <span class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">${index + 1}</span>
+                            <h3 class="font-semibold text-gray-800 text-sm">${company.name}</h3>
+                        </div>
+                        <span class="px-2 py-1 ${statusColor} rounded-full text-xs font-medium">${statusText}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <span class="text-gray-600">Tuman:</span>
+                            <div class="font-medium">${company.region}</div>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Sanoat:</span>
+                            <div class="font-medium">${company.type}</div>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Zaharli gaz:</span>
+                            <div class="font-bold">${company.gasAmount} kg/soat</div>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Ruxsat etilgan:</span>
+                            <div class="font-medium">${company.maxAllowed} kg/soat</div>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="text-gray-600">Jarima:</span>
+                            <div class="font-medium ${penaltyText !== '-' ? 'text-red-600' : 'text-gray-600'}">${penaltyText}</div>
+                        </div>
+                    </div>
+                `;
+                
+                top10Mobile.appendChild(card);
+            });
+        }
+
+        // Har 15 soniyada ma'lumotlarni yangilash
+        setInterval(updateRealTimeData, 15000);
+    </script>
+</body>
+</html>

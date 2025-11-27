@@ -1,0 +1,75 @@
+<!-- Desktop Table -->
+<div class="desktop-table overflow-x-auto">
+    <table class="w-full">
+        <thead>
+            <tr class="border-b-2 border-gray-200">
+                <th class="text-left py-4 px-4 font-semibold text-gray-700">Korxona nomi</th>
+                <th class="text-left py-4 px-4 font-semibold text-gray-700">STIR</th>
+                <th class="text-left py-4 px-4 font-semibold text-gray-700">Tuman</th>
+                <th class="text-left py-4 px-4 font-semibold text-gray-700">Sanoat turi</th>
+                <th class="text-center py-4 px-4 font-semibold text-gray-700">Zaharli gaz</th>
+                <th class="text-center py-4 px-4 font-semibold text-gray-700">Standart</th>
+                <th class="text-center py-4 px-4 font-semibold text-gray-700">Holat</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for company in companies %}
+            <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                <td class="py-4 px-4">
+                    <div class="font-semibold text-gray-800">{{ company.name }}</div>
+                </td>
+                <td class="py-4 px-4 text-gray-600">{{ company.stir_number }}</td>
+                <td class="py-4 px-4 text-gray-600">{{ company.region.name }}</td>
+                <td class="py-4 px-4 text-gray-600">{{ company.industry_type.name }}</td>
+                <td class="py-4 px-4 text-center font-bold {% if company.current_gas_amount > company.max_allowed_gas %}text-red-600{% else %}text-gray-800{% endif %}">
+                    {{ company.current_gas_amount|floatformat:1 }} kg/soat
+                </td>
+                <td class="py-4 px-4 text-center text-gray-600">{{ company.max_allowed_gas }} kg/soat</td>
+                <td class="py-4 px-4 text-center">
+                    <span class="px-3 py-1 
+                        {% if company.status == 'good' %}bg-green-100 text-green-800
+                        {% elif company.status == 'moderate' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-red-100 text-red-800{% endif %} 
+                        rounded-full text-sm font-medium">
+                        {{ company.get_status_display }}
+                    </span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="py-8 text-center text-gray-500">
+                    <i class="fas fa-search text-4xl mb-3"></i>
+                    <p>Hech qanday korxona topilmadi</p>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if companies.has_other_pages %}
+<div class="mt-6 flex justify-center">
+    <nav class="flex space-x-2">
+        {% if companies.has_previous %}
+        <a href="?page={{ companies.previous_page_number }}" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% endif %}
+        
+        {% for num in companies.paginator.page_range %}
+            {% if companies.number == num %}
+            <span class="px-3 py-2 bg-blue-500 text-white rounded-lg">{{ num }}</span>
+            {% else %}
+            <a href="?page={{ num }}" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if companies.has_next %}
+        <a href="?page={{ companies.next_page_number }}" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}

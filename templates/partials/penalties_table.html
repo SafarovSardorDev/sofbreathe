@@ -1,0 +1,190 @@
+<!-- partials/penalties_table.html -->
+<div class="overflow-x-auto">
+    <table class="w-full min-w-full">
+        <thead>
+            <tr class="border-b-2 border-gray-200 bg-gray-50">
+                <th class="text-left py-4 px-4 font-semibold text-gray-700">Jarima raqami</th>
+                <th class="text-left py-4 px-4 font-semibold text-gray-700">Korxona</th>
+                <th class="text-center py-4 px-4 font-semibold text-gray-700">Oshgan miqdor</th>
+                <th class="text-center py-4 px-4 font-semibold text-gray-700">Daraxtlar soni</th>
+                <th class="text-center py-4 px-4 font-semibold text-gray-700">Muddati</th>
+                <th class="text-center py-4 px-4 font-semibold text-gray-700">Holati</th>
+                <th class="text-center py-4 px-4 font-semibold text-gray-700">Yaratilgan sana</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for penalty in penalties %}
+            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 {% if penalty.status == 'active' %}bg-yellow-50{% elif penalty.status == 'completed' %}bg-green-50{% endif %}">
+                <td class="py-4 px-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-file-invoice text-blue-600 text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-800 text-sm">{{ penalty.penalty_number }}</div>
+                            <div class="text-xs text-gray-500">ID: {{ penalty.id }}</div>
+                        </div>
+                    </div>
+                </td>
+                
+                <td class="py-4 px-4">
+                    <div class="max-w-xs">
+                        <div class="font-medium text-gray-800">{{ penalty.company.name }}</div>
+                        <div class="text-sm text-gray-600 mt-1">
+                            <span class="inline-flex items-center space-x-1">
+                                <i class="fas fa-map-marker-alt text-gray-400 text-xs"></i>
+                                <span>{{ penalty.company.region.name }}</span>
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            STIR: {{ penalty.company.stir_number }}
+                        </div>
+                    </div>
+                </td>
+                
+                <td class="py-4 px-4 text-center">
+                    <div class="flex flex-col items-center">
+                        <span class="font-bold text-red-600 text-lg">{{ penalty.excess_amount|floatformat:1 }} kg</span>
+                        <div class="text-xs text-gray-500 mt-1 bg-red-100 px-2 py-1 rounded-full">
+                            <i class="fas fa-chart-line mr-1"></i>
+                            {{ penalty.company.max_allowed_gas }} kg dan oshgan
+                        </div>
+                    </div>
+                </td>
+                
+                <td class="py-4 px-4 text-center">
+                    <div class="flex flex-col items-center">
+                        <span class="font-bold text-green-600 text-lg">{{ penalty.trees_required }} ta</span>
+                        <div class="text-xs text-gray-500 mt-1 bg-green-100 px-2 py-1 rounded-full">
+                            <i class="fas fa-tree mr-1"></i>
+                            Ekish kerak
+                        </div>
+                    </div>
+                </td>
+                
+                <td class="py-4 px-4 text-center">
+                    <div class="flex flex-col items-center">
+                        {% with days_remaining=penalty.get_days_remaining %}
+                        <span class="font-semibold {% if days_remaining < 0 %}text-red-600{% elif days_remaining < 3 %}text-yellow-600{% else %}text-gray-800{% endif %}">
+                            {{ penalty.deadline|date:"d.m.Y" }}
+                        </span>
+                        <div class="text-xs {% if days_remaining < 0 %}text-red-500 bg-red-100{% elif days_remaining < 3 %}text-yellow-600 bg-yellow-100{% else %}text-gray-500 bg-gray-100{% endif %} px-2 py-1 rounded-full mt-1">
+                            {% if days_remaining < 0 %}
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                {{ days_remaining }} kun o'tgan
+                            {% elif days_remaining == 0 %}
+                                <i class="fas fa-clock mr-1"></i>
+                                Bugun
+                            {% elif days_remaining == 1 %}
+                                <i class="fas fa-clock mr-1"></i>
+                                1 kun qolgan
+                            {% else %}
+                                <i class="fas fa-clock mr-1"></i>
+                                {{ days_remaining }} kun qolgan
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                    </div>
+                </td>
+                
+                <td class="py-4 px-4 text-center">
+                    <div class="flex justify-center">
+                        {% if penalty.status == 'active' %}
+                        <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium flex items-center space-x-1">
+                            <i class="fas fa-clock text-yellow-600"></i>
+                            <span>Faol</span>
+                        </span>
+                        {% elif penalty.status == 'completed' %}
+                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium flex items-center space-x-1">
+                            <i class="fas fa-check-circle text-green-600"></i>
+                            <span>Bajarilgan</span>
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium flex items-center space-x-1">
+                            <i class="fas fa-times-circle text-red-600"></i>
+                            <span>Bekor qilingan</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Progress indicator for completed penalties -->
+                    {% if penalty.status == 'completed' and penalty.penaltyresponse_set.exists %}
+                    <div class="mt-2 text-xs text-green-600">
+                        <i class="fas fa-check mr-1"></i>
+                        Javob yuborilgan
+                    </div>
+                    {% endif %}
+                </td>
+                
+                <td class="py-4 px-4 text-center text-gray-600">
+                    <div class="flex flex-col items-center">
+                        <span class="font-medium">{{ penalty.created_at|date:"d.m.Y" }}</span>
+                        <span class="text-xs text-gray-500">{{ penalty.created_at|date:"H:i" }}</span>
+                    </div>
+                </td>
+                
+
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="py-12 text-center">
+                    <div class="flex flex-col items-center justify-center text-gray-500">
+                        <i class="fas fa-file-invoice-dollar text-4xl mb-4 text-gray-300"></i>
+                        <p class="text-lg font-medium text-gray-400">Hech qanday jarima topilmadi</p>
+                        <p class="text-sm mt-2">Filtr parametrlarini o'zgartirib ko'ring yoki yangi jarima yarating</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<!-- Pagination -->
+{% if penalties.has_other_pages %}
+<div class="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+    <div class="text-sm text-gray-600">
+        {{ penalties.start_index }}-{{ penalties.end_index }} / {{ penalties.paginator.count }} ta natija
+    </div>
+    
+    <nav class="flex space-x-1">
+        {% if penalties.has_previous %}
+        <a href="?page={{ penalties.previous_page_number }}" 
+           class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center">
+            <i class="fas fa-chevron-left text-xs mr-1"></i>
+            <span class="hidden sm:inline">Oldingi</span>
+        </a>
+        {% else %}
+        <span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed">
+            <i class="fas fa-chevron-left text-xs mr-1"></i>
+            <span class="hidden sm:inline">Oldingi</span>
+        </span>
+        {% endif %}
+        
+        {% for num in penalties.paginator.page_range %}
+            {% if penalties.number == num %}
+            <span class="px-3 py-2 bg-blue-500 text-white rounded-lg font-medium">{{ num }}</span>
+            {% elif num > penalties.number|add:'-3' and num < penalties.number|add:'3' %}
+            <a href="?page={{ num }}" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                {{ num }}
+            </a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if penalties.has_next %}
+        <a href="?page={{ penalties.next_page_number }}" 
+           class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center">
+            <span class="hidden sm:inline">Keyingi</span>
+            <i class="fas fa-chevron-right text-xs ml-1"></i>
+        </a>
+        {% else %}
+        <span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed">
+            <span class="hidden sm:inline">Keyingi</span>
+            <i class="fas fa-chevron-right text-xs ml-1"></i>
+        </span>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}
+

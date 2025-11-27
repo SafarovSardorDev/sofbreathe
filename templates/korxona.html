@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Korxona Paneli - Ekologiya Qo'mitasi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #fefeff 0%, #f0eef1 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        }
+        .status-good { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .status-moderate { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); }
+        .status-bad { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .nav-item {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            margin: 4px 0;
+        }
+        .nav-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            transform: translateX(5px);
+        }
+        .nav-item.active {
+            background: #3b82f6;
+            color: white;
+        }
+        .search-input {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .search-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .mobile-table { display: none; }
+        @media (max-width: 768px) {
+            .desktop-table { display: none; }
+            .mobile-table { display: block; }
+            .stats-card { padding: 16px; }
+        }
+        .file-upload-area {
+            border: 2px dashed #3b82f6;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            background: rgba(59, 130, 246, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .file-upload-area:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #2563eb;
+        }
+        .file-preview {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: 8px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="glass-card p-6 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-600 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-leaf text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800" id="company-name">Korxona Nomi</h1>
+                        <p class="text-gray-600">Ekologiya monitoring tizimi</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-green-600">
+                        <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm font-medium">Online</span>
+                    </div>
+                    <button onclick="window.location.href='index.html'" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2">
+                        <span>Chiqish</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar -->
+            <div class="lg:col-span-1">
+                <div class="glass-card p-6 sticky top-6">
+                    <nav class="space-y-2">
+                        <a href="#" class="nav-item active flex items-center space-x-3 p-3" data-tab="dashboard">
+                            <i class="fas fa-tachometer-alt w-5 text-center"></i>
+                            <span>Boshqaruv paneli</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center space-x-3 p-3" data-tab="penalties">
+                            <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
+                            <span>Jarima arizalari</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center space-x-3 p-3" data-tab="reports">
+                            <i class="fas fa-chart-bar w-5 text-center"></i>
+                            <span>Hisobotlar</span>
+                        </a>
+                    </nav>
+
+                    <!-- Statistikalar -->
+                    <div class="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h3 class="font-semibold text-blue-800 mb-3">Statistika</h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-blue-700">Joriy gaz:</span>
+                                <span class="font-bold text-blue-800" id="current-gas">0 kg/soat</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-green-600">Ruxsat etilgan:</span>
+                                <span class="font-bold text-green-600" id="allowed-gas">0 kg/soat</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-red-600">Faol jarimalar:</span>
+                                <span class="font-bold text-red-600" id="active-penalties">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="lg:col-span-3">
+                <!-- Dashboard Tab -->
+                <div class="tab-content" id="dashboard-tab">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="stats-card">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="text-white/90 text-sm font-medium">Joriy gaz chiqindi</div>
+                                <i class="fas fa-industry text-white/70 text-xl"></i>
+                            </div>
+                            <div class="text-3xl font-bold text-white mb-1" id="stats-gas">0 kg/soat</div>
+                            <div class="text-white/80 text-xs">Haqiqiy qiymat</div>
+                        </div>
+                        
+                        <div class="stats-card status-good">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="text-white/90 text-sm font-medium">Ruxsat etilgan</div>
+                                <i class="fas fa-check-circle text-white/70 text-xl"></i>
+                            </div>
+                            <div class="text-3xl font-bold text-white mb-1" id="stats-allowed">0 kg/soat</div>
+                            <div class="text-white/80 text-xs">Standart qiymat</div>
+                        </div>
+                        
+                        <div class="stats-card status-moderate">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="text-white/90 text-sm font-medium">Holat</div>
+                                <i class="fas fa-chart-line text-white/70 text-xl"></i>
+                            </div>
+                            <div class="text-3xl font-bold text-white mb-1" id="stats-status">Yaxshi</div>
+                            <div class="text-white/80 text-xs">Monitoring</div>
+                        </div>
+                    </div>
+
+                    <!-- Sensor Ma'lumotlari -->
+                    <div class="glass-card p-6 mb-8">
+                        <h2 class="text-xl font-bold text-gray-800 mb-6">Sensor Ma'lumotlari</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-semibold text-blue-800">Zaharli Gaz Miqdori</h3>
+                                    <i class="fas fa-wind text-blue-500 text-xl"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-blue-800 mb-2" id="sensor-gas">0 kg/soat</div>
+                                <div class="w-full bg-blue-200 rounded-full h-2.5">
+                                    <div class="bg-blue-600 h-2.5 rounded-full" id="gas-progress" style="width: 0%"></div>
+                                </div>
+                                <div class="flex justify-between text-xs text-blue-700 mt-1">
+                                    <span>0</span>
+                                    <span id="gas-max">100</span>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-semibold text-green-800">Sensor Holati</h3>
+                                    <i class="fas fa-microchip text-green-500 text-xl"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-green-800 mb-2" id="sensor-status">Faol</div>
+                                <div class="text-sm text-green-700">Oxirgi yangilanish: <span id="last-update">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- So'nggi Ogohlantirishlar -->
+                    <div class="glass-card p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-6">So'nggi Ogohlantirishlar</h2>
+                        <div class="space-y-4" id="recent-alerts">
+                            <!-- JavaScript bilan to'ldiriladi -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Penalties Tab -->
+                <div class="tab-content hidden" id="penalties-tab">
+                    <div class="glass-card p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 space-y-4 lg:space-y-0">
+                            <h2 class="text-xl font-bold text-gray-800">Jarima Arizalari</h2>
+                            <div class="flex space-x-3">
+                                <select id="filter-penalties" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none">
+                                    <option value="">Barcha holatlar</option>
+                                    <option value="active">Faol</option>
+                                    <option value="completed">Bajarilgan</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6" id="penalties-list">
+                            <!-- JavaScript bilan to'ldiriladi -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Tab -->
+                <div class="tab-content hidden" id="reports-tab">
+                    <div class="glass-card p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-6">Hisobotlar va Ma'lumotlar</h2>
+                        
+                        <!-- Oylik Hisobot -->
+                        <div class="mb-8">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Oylik Gaz Chiqindilari</h3>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <canvas id="monthlyChart" height="100"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Yuklab Olish -->
+                        <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <h3 class="font-semibold text-blue-800 mb-3">Hisobotlarni Yuklab Olish</h3>
+                            <div class="flex flex-wrap gap-4">
+                                <button class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center space-x-2" onclick="downloadReport('monthly')">
+                                    <i class="fas fa-download"></i>
+                                    <span>Oylik hisobot</span>
+                                </button>
+                                <button class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition flex items-center space-x-2" onclick="downloadReport('quarterly')">
+                                    <i class="fas fa-download"></i>
+                                    <span>Choraklik hisobot</span>
+                                </button>
+                                <button class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition flex items-center space-x-2" onclick="downloadReport('yearly')">
+                                    <i class="fas fa-download"></i>
+                                    <span>Yillik hisobot</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Penalty Response Modal -->
+    <div id="penalty-response-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="glass-card p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800">Jarima Arizasiga Javob Berish</h3>
+                <button onclick="closePenaltyResponseModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Jarima ma'lumotlari</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Jarima raqami:</span>
+                                <span class="font-medium" id="response-penalty-id">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Oshib ketgan miqdor:</span>
+                                <span class="font-medium" id="response-excess">- kg</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Daraxtlar soni:</span>
+                                <span class="font-medium" id="response-trees">- ta</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Muddati:</span>
+                                <span class="font-medium" id="response-deadline">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Javob berish</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Izoh</label>
+                                <textarea id="response-comment" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Bajarilgan ishlar haqida izoh..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- File Upload -->
+                <div>
+                    <h4 class="font-semibold text-gray-800 mb-2">Isbot materiallari</h4>
+                    <div class="file-upload-area" onclick="document.getElementById('file-upload').click()">
+                        <i class="fas fa-cloud-upload-alt text-3xl text-blue-500 mb-2"></i>
+                        <p class="text-gray-700">Rasm, video yoki hujjatlarni yuklash uchun bosing</p>
+                        <p class="text-gray-500 text-sm mt-1">PNG, JPG, MP4, PDF (maks. 10MB)</p>
+                        <input type="file" id="file-upload" multiple class="hidden" accept="image/*,video/*,.pdf" onchange="handleFileUpload(event)">
+                    </div>
+                    <div id="file-previews" class="mt-4 flex flex-wrap"></div>
+                </div>
+                
+                <div class="flex space-x-3 pt-4">
+                    <button onclick="closePenaltyResponseModal()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                        Bekor qilish
+                    </button>
+                    <button onclick="submitPenaltyResponse()" class="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition flex items-center justify-center space-x-2">
+                        <i class="fas fa-check"></i>
+                        <span>Javobni yuborish</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Ma'lumotlar bazasi (simulyatsiya)
+        let companyData = JSON.parse(localStorage.getItem('companyData')) || {
+            id: 1,
+            name: "Almaliq KMK Filiali",
+            region: "Olmazor tumani",
+            type: "Metallurgiya",
+            gasAmount: 156,
+            maxAllowed: 100,
+            status: "bad",
+            sensor: true
+        };
+
+        let penalties = JSON.parse(localStorage.getItem('penalties')) || [
+            { id: 1, companyId: 1, company: "Almaliq KMK Filiali", excessAmount: 56, trees: 560, status: "active", date: "2024-02-15", deadline: "2024-03-15", response: null },
+            { id: 2, companyId: 1, company: "Almaliq KMK Filiali", excessAmount: 9, trees: 90, status: "completed", date: "2024-01-10", deadline: "2024-02-10", response: { comment: "Daraxtlar ekildi", files: ["tree_planting.jpg"] } }
+        ];
+
+        let uploadedFiles = [];
+        let currentPenaltyId = null;
+
+        // DOM elementlari
+        const navItems = document.querySelectorAll('.nav-item');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Navigation
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Remove active class from all items
+                navItems.forEach(nav => nav.classList.remove('active'));
+                
+                // Add active class to clicked item
+                item.classList.add('active');
+                
+                // Hide all tab contents
+                tabContents.forEach(tab => tab.classList.add('hidden'));
+                
+                // Show selected tab
+                const tabId = item.getAttribute('data-tab') + '-tab';
+                document.getElementById(tabId).classList.remove('hidden');
+            });
+        });
+
+        // Kompaniya ma'lumotlarini ko'rsatish
+        function renderCompanyData() {
+            document.getElementById('company-name').textContent = companyData.name;
+            document.getElementById('current-gas').textContent = companyData.gasAmount + ' kg/soat';
+            document.getElementById('allowed-gas').textContent = companyData.maxAllowed + ' kg/soat';
+            document.getElementById('active-penalties').textContent = penalties.filter(p => p.status === 'active').length;
+            
+            document.getElementById('stats-gas').textContent = companyData.gasAmount + ' kg/soat';
+            document.getElementById('stats-allowed').textContent = companyData.maxAllowed + ' kg/soat';
+            document.getElementById('stats-status').textContent = getStatusText(companyData.status);
+            
+            document.getElementById('sensor-gas').textContent = companyData.gasAmount + ' kg/soat';
+            document.getElementById('gas-max').textContent = companyData.maxAllowed + ' kg/soat';
+            
+            const progressPercentage = Math.min((companyData.gasAmount / companyData.maxAllowed) * 100, 100);
+            document.getElementById('gas-progress').style.width = progressPercentage + '%';
+            
+            if (progressPercentage > 100) {
+                document.getElementById('gas-progress').classList.remove('bg-blue-600');
+                document.getElementById('gas-progress').classList.add('bg-red-600');
+            } else {
+                document.getElementById('gas-progress').classList.remove('bg-red-600');
+                document.getElementById('gas-progress').classList.add('bg-blue-600');
+            }
+            
+            document.getElementById('last-update').textContent = new Date().toLocaleString('uz-UZ');
+        }
+
+        // Status matnini olish
+        function getStatusText(status) {
+            switch(status) {
+                case 'good': return 'Yaxshi';
+                case 'moderate': return "O'rtacha";
+                case 'bad': return 'Xavfli';
+                default: return 'Noma\'lum';
+            }
+        }
+
+        // So'nggi ogohlantirishlarni ko'rsatish
+        function renderRecentAlerts() {
+            const container = document.getElementById('recent-alerts');
+            const recentAlerts = [...penalties].filter(p => p.status === 'active').slice(0, 3);
+            
+            container.innerHTML = '';
+            
+            if (recentAlerts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-check-circle text-green-500 text-4xl mb-3"></i>
+                        <p>Hozircha faol ogohlantirishlar yo'q</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            recentAlerts.forEach(penalty => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200';
+                
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-white"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-red-800">Jarima arizasi #${penalty.id}</p>
+                            <p class="text-red-700 text-sm mt-1">
+                                ${penalty.trees} ta daraxt ekish kerak • Muddati: ${penalty.deadline}
+                            </p>
+                        </div>
+                    </div>
+                    <button class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm" onclick="showPenaltyResponseModal(${penalty.id})">
+                        Javob berish
+                    </button>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        // Jarimalar ro'yxatini ko'rsatish
+        function renderPenaltiesList() {
+            const container = document.getElementById('penalties-list');
+            
+            container.innerHTML = '';
+            
+            if (penalties.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-check-circle text-green-500 text-4xl mb-3"></i>
+                        <p>Hozircha jarima arizalari yo'q</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            penalties.forEach(penalty => {
+                const statusColor = penalty.status === 'active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+                const statusText = penalty.status === 'active' ? 'Faol' : 'Bajarilgan';
+                
+                const card = document.createElement('div');
+                card.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
+                
+                card.innerHTML = `
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 space-y-3 md:space-y-0">
+                        <div>
+                            <h3 class="font-semibold text-gray-800">Jarima arizasi #${penalty.id}</h3>
+                            <p class="text-gray-600 text-sm mt-1">Sana: ${penalty.date} • Muddati: ${penalty.deadline}</p>
+                        </div>
+                        <span class="px-3 py-1 ${statusColor} rounded-full text-sm font-medium">${statusText}</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="text-center p-3 bg-white rounded-lg">
+                            <div class="text-2xl font-bold text-red-600">${penalty.excessAmount} kg</div>
+                            <div class="text-gray-600 text-sm">Oshib ketgan miqdor</div>
+                        </div>
+                        <div class="text-center p-3 bg-white rounded-lg">
+                            <div class="text-2xl font-bold text-green-600">${penalty.trees} ta</div>
+                            <div class="text-gray-600 text-sm">Daraxtlar soni</div>
+                        </div>
+                        <div class="text-center p-3 bg-white rounded-lg">
+                            <div class="text-lg font-bold text-blue-600">${getDaysRemaining(penalty.deadline)} kun</div>
+                            <div class="text-gray-600 text-sm">Qolgan muddat</div>
+                        </div>
+                    </div>
+                    
+                    ${penalty.response ? `
+                    <div class="p-3 bg-green-50 rounded-lg border border-green-200 mb-4">
+                        <h4 class="font-semibold text-green-800 mb-2">Sizning javobingiz</h4>
+                        <p class="text-green-700">${penalty.response.comment}</p>
+                        ${penalty.response.files && penalty.response.files.length > 0 ? `
+                        <div class="mt-2">
+                            <p class="text-green-700 text-sm font-medium">Yuklangan fayllar:</p>
+                            <div class="flex flex-wrap gap-2 mt-1">
+                                ${penalty.response.files.map(file => `
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">${file}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    ` : ''}
+                    
+                    <div class="flex justify-end">
+                        ${penalty.status === 'active' ? `
+                        <button class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center space-x-2" onclick="showPenaltyResponseModal(${penalty.id})">
+                            <i class="fas fa-reply"></i>
+                            <span>Javob berish</span>
+                        </button>
+                        ` : `
+                        <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg cursor-not-allowed" disabled>
+                            <i class="fas fa-check"></i>
+                            <span>Bajarilgan</span>
+                        </button>
+                        `}
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        // Qolgan kunlarni hisoblash
+        function getDaysRemaining(deadline) {
+            const today = new Date();
+            const deadlineDate = new Date(deadline);
+            const diffTime = deadlineDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays > 0 ? diffDays : 0;
+        }
+
+        // Jarima javob berish modali
+        function showPenaltyResponseModal(penaltyId) {
+            const penalty = penalties.find(p => p.id === penaltyId);
+            if (!penalty) return;
+            
+            currentPenaltyId = penaltyId;
+            
+            // Ma'lumotlarni to'ldirish
+            document.getElementById('response-penalty-id').textContent = penalty.id;
+            document.getElementById('response-excess').textContent = penalty.excessAmount + ' kg';
+            document.getElementById('response-trees').textContent = penalty.trees + ' ta';
+            document.getElementById('response-deadline').textContent = penalty.deadline;
+            
+            // Tozalash
+            document.getElementById('response-comment').value = '';
+            document.getElementById('file-previews').innerHTML = '';
+            uploadedFiles = [];
+            
+            document.getElementById('penalty-response-modal').classList.remove('hidden');
+        }
+
+        function closePenaltyResponseModal() {
+            document.getElementById('penalty-response-modal').classList.add('hidden');
+            currentPenaltyId = null;
+        }
+
+        // Fayl yuklash
+        function handleFileUpload(event) {
+            const files = event.target.files;
+            const previewContainer = document.getElementById('file-previews');
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Fayl hajmini tekshirish (maks. 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showNotification('Fayl hajmi 10MB dan katta bo\'lmasligi kerak', 'error');
+                    continue;
+                }
+                
+                uploadedFiles.push(file);
+                
+                const fileElement = document.createElement('div');
+                fileElement.className = 'relative inline-block';
+                
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        fileElement.innerHTML = `
+                            <img src="${e.target.result}" class="file-preview">
+                            <button class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs" onclick="removeFile(${uploadedFiles.length - 1})">×</button>
+                        `;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    fileElement.innerHTML = `
+                        <div class="file-preview bg-gray-100 flex items-center justify-center">
+                            <div class="text-center">
+                                <i class="fas fa-file text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-xs text-gray-600">${file.name}</p>
+                            </div>
+                        </div>
+                        <button class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs" onclick="removeFile(${uploadedFiles.length - 1})">×</button>
+                    `;
+                }
+                
+                previewContainer.appendChild(fileElement);
+            }
+            
+            // Inputni tozalash
+            event.target.value = '';
+        }
+
+        // Faylni o'chirish
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            renderFilePreviews();
+        }
+
+        // Fayl previewlarini qayta chizish
+        function renderFilePreviews() {
+            const previewContainer = document.getElementById('file-previews');
+            previewContainer.innerHTML = '';
+            
+            uploadedFiles.forEach((file, index) => {
+                const fileElement = document.createElement('div');
+                fileElement.className = 'relative inline-block';
+                
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        fileElement.innerHTML = `
+                            <img src="${e.target.result}" class="file-preview">
+                            <button class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs" onclick="removeFile(${index})">×</button>
+                        `;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    fileElement.innerHTML = `
+                        <div class="file-preview bg-gray-100 flex items-center justify-center">
+                            <div class="text-center">
+                                <i class="fas fa-file text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-xs text-gray-600">${file.name}</p>
+                            </div>
+                        </div>
+                        <button class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs" onclick="removeFile(${index})">×</button>
+                    `;
+                }
+                
+                previewContainer.appendChild(fileElement);
+            });
+        }
+
+        // Jarima javobini yuborish
+        function submitPenaltyResponse() {
+            if (!currentPenaltyId) return;
+            
+            const comment = document.getElementById('response-comment').value;
+            if (!comment.trim()) {
+                showNotification('Iltimos, izoh qoldiring', 'warning');
+                return;
+            }
+            
+            // Fayllarni yuklash (simulyatsiya)
+            const fileNames = uploadedFiles.map(file => file.name);
+            
+            // Jarimani yangilash
+            const penaltyIndex = penalties.findIndex(p => p.id === currentPenaltyId);
+            if (penaltyIndex !== -1) {
+                penalties[penaltyIndex].response = {
+                    comment: comment,
+                    files: fileNames,
+                    date: new Date().toISOString().split('T')[0]
+                };
+                
+                // Agar barcha talablar bajarilgan bo'lsa, jarimani bajarilgan deb belgilash
+                // Haqiqiy loyihada admin tasdiqlashi kerak
+                penalties[penaltyIndex].status = 'completed';
+                
+                localStorage.setItem('penalties', JSON.stringify(penalties));
+            }
+            
+            closePenaltyResponseModal();
+            renderAll();
+            showNotification('Javobingiz muvaffaqiyatli yuborildi', 'success');
+        }
+
+        // Hisobot yuklab olish
+        function downloadReport(type) {
+            // Simulyatsiya - haqiqiy loyihada serverdan yuklab olish kerak
+            showNotification(`${type} hisobot yuklab olindi`, 'success');
+        }
+
+        // Grafikni chizish
+        function renderChart() {
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            
+            // Oylik ma'lumotlar (simulyatsiya)
+            const monthlyData = {
+                labels: ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'],
+                datasets: [
+                    {
+                        label: 'Haqiqiy chiqindi',
+                        data: [120, 135, 145, 130, 125, 140, 156, 150, 145, 140, 135, 130],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Ruxsat etilgan',
+                        data: [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100],
+                        borderColor: '#10b981',
+                        borderDash: [5, 5],
+                        backgroundColor: 'transparent',
+                        tension: 0.4
+                    }
+                ]
+            };
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: monthlyData,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Oylik Gaz Chiqindilari (kg/soat)'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Notification funksiyasi
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Barcha komponentlarni yangilash
+        function renderAll() {
+            renderCompanyData();
+            renderRecentAlerts();
+            renderPenaltiesList();
+        }
+
+        // Dastlabki yuklash
+        document.addEventListener('DOMContentLoaded', function() {
+            renderAll();
+            renderChart();
+            
+            // Avtomatik yangilash (simulyatsiya)
+            setInterval(() => {
+                // Gaz miqdorini tasodifiy o'zgartirish
+                companyData.gasAmount = Math.max(80, Math.min(160, companyData.gasAmount + (Math.random() * 10 - 5)));
+                
+                // Statusni yangilash
+                if (companyData.gasAmount <= companyData.maxAllowed) {
+                    companyData.status = 'good';
+                } else if (companyData.gasAmount <= companyData.maxAllowed * 1.2) {
+                    companyData.status = 'moderate';
+                } else {
+                    companyData.status = 'bad';
+                }
+                
+                localStorage.setItem('companyData', JSON.stringify(companyData));
+                renderCompanyData();
+            }, 10000); // Har 10 soniyada
+        });
+    </script>
+</body>
+</html>
