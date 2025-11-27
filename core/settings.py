@@ -127,7 +127,6 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'  # ✅ Majburiy
 STATICFILES_DIRS = [BASE_DIR / 'static']  # ✅ Qo'shimcha
 
-
 # settings.py fayliga qo'shing
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
